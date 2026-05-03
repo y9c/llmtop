@@ -1,0 +1,31 @@
+# Binaries
+/llmtop
+/llmtop.exe
+
+*.test
+*.out
+*.test/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# System
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/vendor/
+
+# Dist (goreleaser)
+/dist/
+
+# Secrets
+.env
+.env.*
+*.token
+*.secret
+
+# Ignore AGENTS.md — local dev instructions only, not for publication
+AGENTS.md

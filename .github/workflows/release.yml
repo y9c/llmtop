@@ -1,0 +1,74 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Lint
+        run: go vet ./...
+
+      - name: Build
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          GOARCH=${{ matrix.arch }} GOOS=linux go build \
+            -ldflags="-s -w -X main.version=$VERSION" \
+            -trimpath -o llmtop-linux-${{ matrix.arch }} ./cmd/llm-top/
+
+      - name: Test
+        run: go test ./... -v
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llmtop-linux-${{ matrix.arch }}
+          path: llmtop-linux-${{ matrix.arch }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: llmtop-*
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            llmtop-linux-* \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
