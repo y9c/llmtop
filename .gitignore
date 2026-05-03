@@ -19,3 +19,12 @@ Thumbs.db
 
 # Dist (goreleaser)
 /dist/
+
+# Secrets
+.env
+.env.*
+*.token
+*.secret
+
+# Ignore AGENTS.md — local dev instructions only, not for publication
+AGENTS.md
