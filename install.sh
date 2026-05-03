@@ -29,7 +29,39 @@ esac
 
 BINARY="llmtop-linux-${ARCH_NAME}"
 URL="https://github.com/y9c/llmtop/releases/latest/download/${BINARY}"
-...
+
+# Determine install directory
+if [ "$(id -u)" -eq 0 ]; then
+    INSTALL_DIR="/usr/local/bin"
+else
+    if [ -d "$HOME/.local/bin" ]; then
+        INSTALL_DIR="$HOME/.local/bin"
+    elif [ -d "$HOME/bin" ]; then
+        INSTALL_DIR="$HOME/bin"
+    else
+        INSTALL_DIR="$HOME/.local/bin"
+        mkdir -p "$INSTALL_DIR"
+    fi
+fi
+
+if [ -f "$INSTALL_DIR/llmtop" ]; then
+    info "Existing 'llmtop' binary found at $INSTALL_DIR. Upgrading..."
+    IS_UPGRADE=true
+else
+    info "Installing 'llmtop' for the first time."
+    IS_UPGRADE=false
+fi
+
+info "Downloading from $URL"
+TMP_DIR=$(mktemp -d)
+curl -sL "$URL" -o "$TMP_DIR/llmtop"
+chmod +x "$TMP_DIR/llmtop"
+
+if ! "$TMP_DIR/llmtop" --help >/dev/null 2>"$TMP_DIR/llmtop.err"; then
+    fail "Downloaded 'llmtop' binary could not run on this machine."
+    if grep 'GLIBC_.*not found' "$TMP_DIR/llmtop.err" >/dev/null 2>&1; then
+        fail "This binary requires a newer GLIBC than your system provides."
+        warn "Build locally instead:"
         printf "  git clone https://github.com/y9c/llmtop.git\n"
         printf "  cd llmtop && make build\n"
     else

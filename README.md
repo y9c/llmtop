@@ -2,8 +2,6 @@
 
 Real-time terminal dashboard for LLM inference servers. Monitor GPU utilization, throughput, speculative decoding, prefix cache, and timeline charts — all in your terminal.
 
-![screenshot](./docs/screenshot.png)
-
 ## Installation
 
 ```bash
