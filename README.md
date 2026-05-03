@@ -5,7 +5,7 @@ Real-time terminal dashboard for LLM inference servers. Monitor GPU utilization,
 ## Installation
 
 ```bash
-curl -sfL https://raw.githubusercontent.com/y9c/llmtop/master/install.sh | sh
+curl -sfL https://raw.githubusercontent.com/y9c/llmtop/main/install.sh | sh
 ```
 
 Or build from source:
