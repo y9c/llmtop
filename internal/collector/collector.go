@@ -2,7 +2,7 @@ package collector
 
 import (
 	"context"
-	"github.com/changye/llmtop/internal/metrics"
+	"github.com/y9c/llmtop/internal/metrics"
 )
 
 type GPUCollector interface {

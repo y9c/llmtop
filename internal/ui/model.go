@@ -4,7 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/changye/llmtop/internal/metrics"
+	"github.com/y9c/llmtop/internal/metrics"
 )
 
 type TickMsg struct {

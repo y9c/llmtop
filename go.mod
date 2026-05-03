@@ -1,4 +1,4 @@
-module github.com/changye/llmtop
+module github.com/y9c/llmtop
 
 go 1.24.0
 

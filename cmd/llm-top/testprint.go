@@ -5,8 +5,8 @@ package main
 import (
 	"fmt"
 	"time"
-	"github.com/changye/llmtop/internal/metrics"
-	"github.com/changye/llmtop/internal/ui"
+	"github.com/y9c/llmtop/internal/metrics"
+	"github.com/y9c/llmtop/internal/ui"
 )
 
 func main() {

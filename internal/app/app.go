@@ -7,12 +7,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"log"
 
-	"github.com/changye/llmtop/internal/backend"
-	"github.com/changye/llmtop/internal/collector"
-	"github.com/changye/llmtop/internal/config"
-	"github.com/changye/llmtop/internal/fetcher"
-	"github.com/changye/llmtop/internal/metrics"
-	"github.com/changye/llmtop/internal/ui"
+	"github.com/y9c/llmtop/internal/backend"
+	"github.com/y9c/llmtop/internal/collector"
+	"github.com/y9c/llmtop/internal/config"
+	"github.com/y9c/llmtop/internal/fetcher"
+	"github.com/y9c/llmtop/internal/metrics"
+	"github.com/y9c/llmtop/internal/ui"
 )
 
 type App struct {

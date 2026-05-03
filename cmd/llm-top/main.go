@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/changye/llmtop/internal/app"
-	"github.com/changye/llmtop/internal/collector"
-	"github.com/changye/llmtop/internal/config"
-	"github.com/changye/llmtop/internal/fetcher"
-	"github.com/changye/llmtop/internal/ui"
+	"github.com/y9c/llmtop/internal/app"
+	"github.com/y9c/llmtop/internal/collector"
+	"github.com/y9c/llmtop/internal/config"
+	"github.com/y9c/llmtop/internal/fetcher"
+	"github.com/y9c/llmtop/internal/ui"
 )
 
 var version = "dev"

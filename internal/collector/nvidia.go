@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/changye/llmtop/internal/metrics"
+	"github.com/y9c/llmtop/internal/metrics"
 )
 
 func (n *NvidiaSMI) Fetch(ctx context.Context) (metrics.GPU, error) {

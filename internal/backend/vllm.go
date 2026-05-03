@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/changye/llmtop/internal/metrics"
+	"github.com/y9c/llmtop/internal/metrics"
 )
 
 type matchRule struct {
