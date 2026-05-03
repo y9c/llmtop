@@ -35,12 +35,12 @@ jobs:
 
       - name: Build
         env:
-          GOOS: linux
-          GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: '0'
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          go build -ldflags="-s -w -X main.version=$VERSION" -trimpath -o llmtop-${{ matrix.arch }} ./cmd/llm-top/
+          GOARCH=${{ matrix.arch }} GOOS=linux go build \
+            -ldflags="-s -w -X main.version=$VERSION" \
+            -trimpath -o llmtop-linux-${{ matrix.arch }} ./cmd/llm-top/
 
       - name: Test
         run: go test ./... -v

@@ -27,8 +27,8 @@ case "$ARCH" in
     *) fail "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
-BINARY="llmtop-${OS_NAME}-${ARCH_NAME}"
-URL="https://github.com/changye/llmtop/releases/download/latest/${BINARY}"
+BINARY="llmtop-linux-${ARCH_NAME}"
+URL="https://github.com/changye/llmtop/releases/latest/download/${BINARY}"
 
 # Determine install directory
 if [ "$(id -u)" -eq 0 ]; then
