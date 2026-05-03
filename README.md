@@ -44,6 +44,11 @@ llmtop --gpu 0                  # Monitor specific GPU
 | **vLLM** | Full metrics |
 | **SGLang** | Basic |
 | **llama.cpp** | Basic |
+| **Ollama** | Basic |
+
+## TODO
+
+- [ ] Full Ollama backend support — parse `/api/tags` and inference metrics
 
 ## License
 
