@@ -1,0 +1,21 @@
+# Binaries
+/llmtop
+/llmtop.exe
+
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# System
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/vendor/
+
+# Dist (goreleaser)
+/dist/

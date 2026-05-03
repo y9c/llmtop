@@ -1,0 +1,22 @@
+package backend
+
+import "github.com/changye/llmtop/internal/metrics"
+
+type Backend interface {
+	Name() string
+	Detect(body string) bool
+	Parse(body string) (metrics.Snapshot, error)
+}
+
+var _ Backend = (*VLLM)(nil)
+
+var backends = []Backend{&SGLang{}, &LLamaCPP{}, &Ollama{}, &VLLM{}}
+
+func Detect(body string) Backend {
+	for _, b := range backends {
+		if b.Detect(body) {
+			return b
+		}
+	}
+	return &VLLM{}
+}
