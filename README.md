@@ -1,6 +1,6 @@
 # llmtop
 
-Real-time terminal dashboard for LLM inference servers. Monitor vLLM (and other backends) GPU utilization, throughput, speculative decoding, prefix cache, and time-series charts.
+Real-time terminal dashboard for LLM inference servers. Monitor GPU utilization, throughput, speculative decoding, prefix cache, and timeline charts — all in your terminal.
 
 ![screenshot](./docs/screenshot.png)
 
@@ -20,10 +20,11 @@ cd llmtop && make build
 ## Usage
 
 ```bash
-llmtop                          # Connect to localhost:8000
+llmtop                          # Connect to localhost:8000 (default)
 llmtop --port 8080              # Different port
 llmtop --host 192.168.1.100     # Remote host
 llmtop --rate 500ms             # Faster updates
+llmtop --gpu 0                  # Monitor specific GPU
 ```
 
 | Flag | Default | Description |
@@ -32,27 +33,17 @@ llmtop --rate 500ms             # Faster updates
 | `--port` | `8000` | Metrics port |
 | `--backend` | `auto` | Force backend (`vllm`, `sglang`, `ollama`) |
 | `--rate` | `1s` | Update interval |
-| `--gpu` | `-1` (all) | GPU ID |
-| `q` / `Ctrl+C` | | Quit |
+| `--gpu` | `-1` (all) | GPU ID (0-based) |
 
-## Architecture
+`q` or `Ctrl+C` to quit.
 
-```
-llmtop/
-├── cmd/llm-top/main.go
-├── internal/
-│   ├── app/           # Ticker loop, fetch, delta compute
-│   ├── backend/       # vLLM, SGLang, llama.cpp parsers
-│   ├── collector/     # nvidia-smi GPU data
-│   ├── config/        # CLI flags and env vars
-│   ├── fetcher/       # HTTP client with retry
-│   ├── metrics/       # Ring buffer + snapshot types
-│   └── ui/            # bubbletea TUI renderer
-├── Makefile
-└── install.sh
-```
+## Backends
 
-Built with [bubbletea](https://github.com/charmbracelet/bubbletea), [lipgloss](https://github.com/charmbracelet/lipgloss), [asciigraph](https://github.com/guptarohit/asciigraph).
+| Backend | Status |
+|---------|--------|
+| **vLLM** | Full metrics |
+| **SGLang** | Basic |
+| **llama.cpp** | Basic |
 
 ## License
 
