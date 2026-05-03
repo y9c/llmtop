@@ -25,22 +25,12 @@ var (
 	styleEmpty    = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
 	styleLowVal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555")).Bold(true)
 	styleMidVal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Bold(true)
-	styleHighVal  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00dd66")).Bold(true)
-
-	styleBarRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff3333"))
-	styleBarOrange = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00"))
-	styleBarYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffdd00"))
-	styleBarGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00cc44"))
-	styleBarBg     = lipgloss.NewStyle().Foreground(lipgloss.Color("#333333"))
+	styleHighVal  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00dd66"))
 
 	stylePctRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff3333")).Bold(true)
 	stylePctOrange = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Bold(true)
 	stylePctYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffdd00")).Bold(true)
 	stylePctGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00cc44")).Bold(true)
-
-	// Pre-computed block-strings for bar() widths 0..15
-	barFill = preBuildBarFills()
-	barBg   = preBuildBarBgs()
 
 	// Pre-rendered fixed strings — lipgloss.Render() allocates, so render once at init
 	grayPipe    = styleGrayPipe.Render("│")
@@ -78,39 +68,6 @@ var (
 	tagCmp   = styleTag.Render("cmp")
 )
 
-func preBuildBarFills() []string {
-	out := make([]string, 16)
-	for i := range out {
-		out[i] = strings.Repeat("█", i)
-	}
-	return out
-}
-
-func preBuildBarBgs() []string {
-	out := make([]string, 16)
-	for i := range out {
-		out[i] = strings.Repeat("░", i)
-	}
-	return out
-}
-
-func bar(v, max float64, w int) string {
-	if max <= 0 { return strings.Repeat(" ", w) }
-	pct := v / max
-	if pct < 0 { pct = 0 }
-	if pct > 1 { pct = 1 }
-	n := int(pct * float64(w))
-	if n > w { n = w }
-	var fill, bg lipgloss.Style
-	switch {
-	case pct*100 >= 90: fill, bg = styleBarRed, styleBarBg
-	case pct*100 >= 70: fill, bg = styleBarOrange, styleBarBg
-	case pct*100 >= 40: fill, bg = styleBarYellow, styleBarBg
-	default: fill, bg = styleBarGreen, styleBarBg
-	}
-	return fill.Render(barFill[n]) + bg.Render(barBg[w-n])
-}
-
 func fmtNum(v float64) string {
 	// Avoid fmt.Sprintf for the common case — use strconv on a reusable buffer
 	buf := fmtBuf[:0]
@@ -134,22 +91,6 @@ func fmtNum(v float64) string {
 }
 
 var fmtBuf = make([]byte, 0, 32)
-
-func fmtMB(v float64) string {
-	if v >= 1024 { return fmt.Sprintf("%.1fGB", v/1024) }
-	return fmt.Sprintf("%.0fMB", v)
-}
-
-func colorVal(v float64, s string) string {
-	var st lipgloss.Style
-	switch {
-	case v <= 0: st = styleEmpty
-	case v < 15: st = styleLowVal
-	case v < 35: st = styleMidVal
-	default: st = styleHighVal
-	}
-	return st.Render(s)
-}
 
 // colorValInline formats v with the given width/precision, then colors it.
 func colorValInline(v float64, width, dec int) string {
@@ -203,17 +144,6 @@ var cvBuf = make([]byte, 0, 16)
 // Reusable buffers for string building in buildView
 var titleBuf = make([]byte, 0, 128)
 var footBuf = make([]byte, 0, 128)
-
-func colorPct(pct float64, s string) string {
-	var st lipgloss.Style
-	switch {
-	case pct >= 90: st = stylePctRed
-	case pct >= 70: st = stylePctOrange
-	case pct >= 40: st = stylePctYellow
-	default: st = stylePctGreen
-	}
-	return st.Render(s)
-}
 
 type chartDef struct {
 	name  string
@@ -600,4 +530,3 @@ func formatDuration(d time.Duration) string {
 
 var durBuf = make([]byte, 0, 16)
 
-func min(a, b int) int { if a < b { return a }; return b }
