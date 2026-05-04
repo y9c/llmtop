@@ -33,25 +33,30 @@ llmtop --url http://ollama:11434/api/ps  # Custom metrics URL
 | `--url` | `""` | Full metrics URL (overrides host/port) |
 | `--host` | `localhost` | Metrics host |
 | `--port` | `8000` | Metrics port |
-| `--backend` | `auto` | Force backend (`vllm`, `sglang`, `ollama`) |
+| `--backend` | `auto` | Force backend (`vllm`, `sglang`, `ollama`, `llamacpp`) |
 | `--rate` | `1s` | Update interval |
 | `--gpu` | `-1` (all) | GPU ID (0-based) |
 
 `q` or `Ctrl+C` to quit.
 
+> **llama.cpp users**: Pass `--metrics 1` to `llama-server` to enable the `/metrics` endpoint.
+
 ## Backends
 
 | Backend | Status |
 |---------|--------|
-| **vLLM** | Full metrics |
-| **SGLang** | Basic |
-| **llama.cpp** | Basic |
-| **Ollama** | Basic |
+| **vLLM** | Full metrics (inc. speculative decoding, prefix cache) |
+| **SGLang** | Full metrics |
+| **llama.cpp** | Full metrics (inc. speculative decoding) |
+| **Ollama** | VRAM usage via `/api/ps` |
 
 ## Features
 
 - GPU temperature (°C) and power draw (W) in footer
 - Session-wide min/avg/max TTFT and TPOT latency tracking
+- Speculative decoding acceptance rate per position
+- Prefix cache hit rate tracking
+- Nightly builds on every push to main
 - Custom metrics URL via `--url` flag
 
 ## License
