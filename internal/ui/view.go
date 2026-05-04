@@ -125,15 +125,11 @@ func colorValInline(v float64, width, dec int) string {
 	} else {
 		b = strconv.AppendFloat(b, v, 'f', 0, 64)
 	}
-	// Right-justify: prepend spaces in a single pass (avoids O(n²) append-copy-shift loop)
-	if len(b) < width {
-		old := b
-		pad := width - len(old)
-		b = cvBuf[:pad+len(old)]
-		for i := 0; i < pad; i++ {
-			b[i] = ' '
-		}
-		copy(b[pad:], old)
+	for len(b) < width {
+		// Prepend space for right-alignment (like fmt.Sprintf("%*d", width, v))
+		b = append(b, 0)
+		copy(b[1:], b)
+		b[0] = ' '
 	}
 	return st.Render(string(b))
 }
@@ -277,10 +273,6 @@ func (m Model) buildView() string {
 	tb = append(tb, " llmtop ┃ "...)
 	tb = append(tb, m.Backend...)
 	tb = append(tb, " ┃ "...)
-	if cnt := s.GPUCount(); cnt > 1 {
-		tb = strconv.AppendInt(tb, int64(cnt), 10)
-		tb = append(tb, []byte("×")...)
-	}
 	tb = append(tb, s.GPUName...)
 	if s.GPUTempC > 0 {
 		tb = append(tb, " ┃ "...)
@@ -539,26 +531,15 @@ func twoColBot(lW, rW int) string {
 
 func truncateWidth(s string, w int) string {
 	vis := lipgloss.Width(s)
-	if vis <= w {
-		return s + strings.Repeat(" ", w-vis)
-	}
+	if vis <= w { return s + strings.Repeat(" ", w-vis) }
 	var out strings.Builder
 	plain := 0
 	inANSI := false
 	for _, r := range s {
-		// All ANSI escape sequences start with ESC (\x1b) and end with a
-		// byte in the range 0x40-0x7E (for CSI sequences, the final byte).
-		// Lipgloss only produces SGR sequences ending in 'm', but we try to
-		// handle generic terminators for robustness.
-		if r == '\x1b' {
-			inANSI = true
-		}
+		if r == '\x1b' { inANSI = true }
 		if inANSI {
 			out.WriteRune(r)
-			// ANSI sequences end at the first byte in 0x40-0x7E range.
-			if r >= 0x40 && r <= 0x7E {
-				inANSI = false
-			}
+			if r == 'm' { inANSI = false }
 			continue
 		}
 		if plain >= w {
@@ -567,7 +548,6 @@ func truncateWidth(s string, w int) string {
 		out.WriteRune(r)
 		plain++
 	}
-	// Reset ANSI styling on the truncated content so it doesn't bleed
 	out.WriteString("\x1b[0m")
 	return out.String()
 }
