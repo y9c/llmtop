@@ -29,3 +29,4 @@ Thumbs.db
 
 # Ignore AGENTS.md — local dev instructions only, not for publication
 AGENTS.md
+deploy/
