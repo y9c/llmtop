@@ -16,6 +16,10 @@ type Snapshot struct {
 	GPUPowerMaxW    float64
 	KVCacheUsagePct float64
 
+	// GPUs holds raw per-GPU data from nvidia-smi (multi-GPU support).
+	// The averaged fields (GPUUsedMB, GPUMemTotalMB, etc.) remain for backward compat.
+	GPUs []GPU
+
 	// Requests
 	RunningReqs float64
 	WaitingReqs float64
@@ -73,6 +77,9 @@ type GPU struct {
 	PowerW   float64
 	PowerMaxW float64
 }
+
+// GPUCount returns the total number of GPUs in the snapshot.
+func (s Snapshot) GPUCount() int { return len(s.GPUs) }
 
 // IsEmpty returns true if this snapshot has no data yet.
 func (s Snapshot) IsEmpty() bool {

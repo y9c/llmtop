@@ -7,12 +7,12 @@ import (
 
 type GPUCollector interface {
 	Name() string
-	Fetch(ctx context.Context) (metrics.GPU, error)
+	Fetch(ctx context.Context) ([]metrics.GPU, error)
 }
 
-type NvidiaSMI struct{ ID int }
+type NvidiaSMI struct{}
 
-func NewNvidiaSMI(gpuID int) *NvidiaSMI { return &NvidiaSMI{ID: gpuID} }
+func NewNvidiaSMI() *NvidiaSMI { return &NvidiaSMI{} }
 
 func (n *NvidiaSMI) Name() string { return "NVIDIA" }
 
