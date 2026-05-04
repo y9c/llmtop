@@ -28,7 +28,7 @@ case "$ARCH" in
 esac
 
 BINARY="llmtop-linux-${ARCH_NAME}"
-URL="https://github.com/y9c/llmtop/releases/latest/download/${BINARY}"
+URL="https://github.com/y9c/llmtop/releases/download/nightly/${BINARY}"
 
 # Determine install directory
 if [ "$(id -u)" -eq 0 ]; then

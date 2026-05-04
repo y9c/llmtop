@@ -111,7 +111,10 @@ func (a *App) doFetch(ctx context.Context) {
 
 	body, httpErr := a.fetcher.Fetch(fetchCtx, a.cfg.MetricsURL())
 
-	if httpErr == nil && a.backend == nil {
+	if a.cfg.Backend != "auto" && a.backend == nil {
+		a.backend = backend.ByName(a.cfg.Backend)
+	}
+	if a.backend == nil && httpErr == nil {
 		a.backend = backend.Detect(body)
 	}
 	if a.backend == nil {
@@ -169,7 +172,9 @@ func (a *App) doFetch(ctx context.Context) {
 		}
 	}
 	a.prevSnap = snap
-	a.prevSet = true
+	if !snap.IsEmpty() {
+		a.prevSet = true
+	}
 
 	lat := ui.LatencyStats{}
 	if a.ttftN > 0 {

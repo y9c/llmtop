@@ -76,7 +76,7 @@ type GPU struct {
 
 // IsEmpty returns true if this snapshot has no data yet.
 func (s Snapshot) IsEmpty() bool {
-	return s.GenTokensTotal == 0 && s.PromptTokensTotal == 0 && s.SpecDraftsTotal == 0
+	return s.GenTokensTotal == 0 && s.SpecDraftsTotal == 0
 }
 
 // ComputeDelta computes Deltas from two sequential snapshots.

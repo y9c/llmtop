@@ -70,15 +70,28 @@ func Parse(version string) *Config {
 	flag.StringVar(&cfg.URL, "url", cfg.URL, "Full metrics URL (overrides host/port)")
 	flag.StringVar(&cfg.Host, "host", cfg.Host, "Metrics host")
 	flag.IntVar(&cfg.Port, "port", cfg.Port, "Metrics port")
-	flag.StringVar(&cfg.Backend, "backend", cfg.Backend, "Backend (auto/vllm/sglang/ollama/llmcpp)")
+	flag.StringVar(&cfg.Backend, "backend", cfg.Backend, "Backend (auto/vllm/sglang/ollama/llamacpp)")
 	flag.DurationVar(&cfg.Rate, "rate", cfg.Rate, "Update interval (e.g. 1s, 500ms)")
 	flag.IntVar(&cfg.GPUID, "gpu", cfg.GPUID, "GPU ID (0-based)")
 	showHelp := flag.Bool("help", false, "Show help")
 	ver := flag.Bool("version", false, "Show version")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\nOptions:\n", os.Args[0])
+		printFlag("--url", cfg.URL, "Full metrics URL (overrides host/port)")
+		printFlag("--host", cfg.Host, "Metrics host")
+		printFlag("--port", cfg.Port, "Metrics port")
+		printFlag("--backend", cfg.Backend, "Backend (auto/vllm/sglang/ollama/llamacpp)")
+		printFlag("--gpu", cfg.GPUID, "GPU ID (0-based)")
+		printFlag("--rate", cfg.Rate, "Update interval (e.g. 1s, 500ms)")
+		printFlag("--help", false, "Show help")
+		printFlag("--version", false, "Show version")
+	}
+
 	flag.Parse()
 
 	if *showHelp {
-		flag.PrintDefaults()
+		flag.Usage()
 		os.Exit(0)
 	}
 	if *ver {
@@ -86,4 +99,8 @@ func Parse(version string) *Config {
 		os.Exit(0)
 	}
 	return cfg
+}
+
+func printFlag[T any](name string, val T, desc string) {
+	fmt.Fprintf(os.Stderr, "  \033[36m%-12s\033[0m %s (\033[33mdefault %v\033[0m)\n", name, desc, val)
 }

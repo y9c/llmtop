@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseRealVLLMMetrics(t *testing.T) {
-    body, err := os.ReadFile("/tmp/vllm_metrics_full.txt")
+    body, err := os.ReadFile("/tmp/vllm_metrics_final.txt")
     if err != nil {
         t.Skip("no captured metrics file")
     }

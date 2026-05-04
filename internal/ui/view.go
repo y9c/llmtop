@@ -249,6 +249,9 @@ func (m Model) buildView() string {
 	chr := 0.0
 	if s.PrefixCacheQueries > 0 { chr = s.PrefixCacheHits / s.PrefixCacheQueries * 100 }
 	draftAcceptPct := d.AcceptRate * 100
+	if draftAcceptPct == 0 && s.SpecDraftToksTotal > 0 {
+		draftAcceptPct = s.SpecAcceptedTotal / s.SpecDraftToksTotal * 100
+	}
 	rej := s.SpecDraftToksTotal - s.SpecAcceptedTotal
 	accPerDraftBatch := 0.0
 	if s.SpecDraftsTotal > 0 { accPerDraftBatch = s.SpecAcceptedTotal / s.SpecDraftsTotal }

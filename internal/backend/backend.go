@@ -20,3 +20,15 @@ func Detect(body string) Backend {
 	}
 	return &VLLM{}
 }
+
+var backendByName = map[string]Backend{
+	"vllm":    &VLLM{},
+	"llamacpp": &LLamaCPP{},
+	"ollama":  &Ollama{},
+	"sglang":  &SGLang{},
+}
+
+// ByName returns a backend by name. Returns nil if not found.
+func ByName(name string) Backend {
+	return backendByName[name]
+}
