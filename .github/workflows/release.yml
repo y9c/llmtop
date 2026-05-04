@@ -90,6 +90,7 @@ jobs:
       - name: Nightly release (overwrite on each push)
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
@@ -98,18 +99,14 @@ jobs:
           gh release delete nightly --yes --repo "${{ github.repository }}" 2>/dev/null || true
           gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/nightly" 2>/dev/null || true
 
+          # Build release notes as a variable to avoid YAML issues
+          NOTES="Auto-built from main@${SHORT_SHA}. Updated on every push."
+          NOTES+=" Quick install: curl -sL https://github.com/y9c/llmtop/releases/latest/download/llmtop-linux-amd64 -o /usr/local/bin/llmtop && chmod +x /usr/local/bin/llmtop"
+          NOTES+=" For arm64, replace amd64 with arm64."
+
           # Create new nightly release — marked as latest so install.sh works
           gh release create "nightly" \
             llmtop-linux-* \
             --title "Nightly (${TIMESTAMP})" \
-            --notes "Auto-built from main@${SHORT_SHA}. Updated on every push.
-
-```
-# install or update:
-curl -sL https://github.com/y9c/llmtop/releases/latest/download/llmtop-linux-amd64 -o /usr/local/bin/llmtop
-chmod +x /usr/local/bin/llmtop
-```
-
-For arm64, replace \`amd64\` with \`arm64\`.
-" \
+            --notes "${NOTES}" \
             --latest
