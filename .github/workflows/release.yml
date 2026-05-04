@@ -98,6 +98,7 @@ jobs:
           # Delete old nightly release + tag if exists
           gh release delete nightly --yes --repo "${{ github.repository }}" 2>/dev/null || true
           gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/nightly" 2>/dev/null || true
+          git tag -d nightly 2>/dev/null || true
 
           # Build release notes as a variable to avoid YAML issues
           NOTES="Auto-built from main@${SHORT_SHA}. Updated on every push."
