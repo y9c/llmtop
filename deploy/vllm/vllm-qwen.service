@@ -1,0 +1,15 @@
+[Unit]
+Description=vLLM Qwen3.6-27B-FP8 Server (L40S Optimized)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/changye/Coding/llm/deploy/vllm
+ExecStart=/home/changye/Coding/llm/deploy/vllm/start.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

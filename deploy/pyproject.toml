@@ -1,0 +1,10 @@
+[project]
+name = "llm-deploy"
+version = "0.1.0"
+description = "LLM inference server deployment manager"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+vllm = ["vllm>=0.20.0"]
+llamacpp = ["llama-cpp-python>=0.3.0"]
+ollama = []  # uses binary or SDK
