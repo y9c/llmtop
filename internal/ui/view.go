@@ -273,6 +273,10 @@ func (m Model) buildView() string {
 	tb = append(tb, " llmtop ┃ "...)
 	tb = append(tb, m.Backend...)
 	tb = append(tb, " ┃ "...)
+	if cnt := s.GPUCount(); cnt > 1 {
+		tb = strconv.AppendInt(tb, int64(cnt), 10)
+		tb = append(tb, []byte("×")...)
+	}
 	tb = append(tb, s.GPUName...)
 	if s.GPUTempC > 0 {
 		tb = append(tb, " ┃ "...)

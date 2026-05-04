@@ -16,6 +16,8 @@ type Snapshot struct {
 	GPUPowerMaxW    float64
 	KVCacheUsagePct float64
 
+	GPUs []GPU
+
 	// Requests
 	RunningReqs float64
 	WaitingReqs float64
@@ -62,6 +64,8 @@ type Deltas struct {
 	PrefillTokS float64
 	AcceptRate  float64
 }
+
+func (s Snapshot) GPUCount() int { return len(s.GPUs) }
 
 // GPU is a single GPU info row from nvidia-smi.
 type GPU struct {

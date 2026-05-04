@@ -104,9 +104,9 @@ func (a *App) doFetch(ctx context.Context) {
 	fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	gpuInfo, gpuErr := a.gpu.Fetch(fetchCtx)
-	if gpuErr == nil && a.gpuName == "" {
-		a.gpuName = gpuInfo.Name
+	gpuList, gpuErr := a.gpu.Fetch(fetchCtx)
+	if gpuErr == nil && a.gpuName == "" && len(gpuList) > 0 {
+		a.gpuName = gpuList[0].Name
 	}
 
 	body, httpErr := a.fetcher.Fetch(fetchCtx, a.cfg.MetricsURL())
@@ -132,13 +132,31 @@ func (a *App) doFetch(ctx context.Context) {
 	snap.Timestamp = time.Now()
 
 	if gpuErr == nil {
-		snap.GPUUsedMB = gpuInfo.UsedMB
-		snap.GPUMemTotalMB = gpuInfo.TotalMB
-		snap.GPUUtilPct = gpuInfo.UtilPct
-		snap.GPUTempC = gpuInfo.TempC
-		snap.GPUPowerW = gpuInfo.PowerW
-		snap.GPUPowerMaxW = gpuInfo.PowerMaxW
-		snap.GPUName = gpuInfo.Name
+		snap.GPUs = gpuList
+		var avg metrics.GPU
+		for _, g := range gpuList {
+			avg.UsedMB += g.UsedMB
+			avg.TotalMB += g.TotalMB
+			avg.UtilPct += g.UtilPct
+			avg.TempC += g.TempC
+			avg.PowerW += g.PowerW
+			avg.PowerMaxW += g.PowerMaxW
+		}
+		n := float64(len(gpuList))
+		avg.Name = gpuList[0].Name
+		avg.UsedMB /= n
+		avg.TotalMB /= n
+		avg.UtilPct /= n
+		avg.TempC /= n
+		avg.PowerW /= n
+		avg.PowerMaxW /= n
+		snap.GPUUsedMB = avg.UsedMB
+		snap.GPUMemTotalMB = avg.TotalMB
+		snap.GPUUtilPct = avg.UtilPct
+		snap.GPUTempC = avg.TempC
+		snap.GPUPowerW = avg.PowerW
+		snap.GPUPowerMaxW = avg.PowerMaxW
+		snap.GPUName = avg.Name
 	}
 
 	var delta metrics.Deltas

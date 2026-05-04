@@ -3,67 +3,76 @@ package collector
 import (
 	"context"
 	"fmt"
-	"os/exec"
-	"strconv"
-	"strings"
 
+	"github.com/NVIDIA/go-nvml/pkg/nvml"
 	"github.com/y9c/llmtop/internal/metrics"
 )
 
-func (n *NvidiaSMI) Fetch(ctx context.Context) (metrics.GPU, error) {
-	args := []string{
-		"--query-gpu=name,memory.used,memory.total,utilization.gpu,temperature.gpu,power.draw,power.limit",
-		"--format=csv,noheader,nounits",
+func (n *NVMLCollector) Fetch(ctx context.Context) ([]metrics.GPU, error) {
+	ret := nvml.Init()
+	if ret != nvml.SUCCESS {
+		return nil, fmt.Errorf("nvml.Init: %v", ret)
 	}
-	if n.ID >= 0 {
-		args = append(args, fmt.Sprintf("--id=%d", n.ID))
+	defer nvml.Shutdown()
+
+	count, ret := nvml.DeviceGetCount()
+	if ret != nvml.SUCCESS {
+		return nil, fmt.Errorf("nvml.DeviceGetCount: %v", ret)
 	}
-	cmd := exec.CommandContext(ctx, "nvidia-smi", args...)
-	out, err := cmd.Output()
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: %w", err)
+	if count == 0 {
+		return nil, fmt.Errorf("nvml: no GPUs found")
 	}
 
-	// Handle multi-GPU: take the first line if multiple lines returned
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	line := strings.TrimSpace(lines[0])
-	parts := strings.Split(line, ", ")
-	if len(parts) != 7 {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: unexpected output: %q", line)
+	gpus := make([]metrics.GPU, 0, count)
+	for i := 0; i < count; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		dev, ret := nvml.DeviceGetHandleByIndex(i)
+		if ret != nvml.SUCCESS {
+			return nil, fmt.Errorf("nvml.DeviceGetHandleByIndex(%d): %v", i, ret)
+		}
+
+		var g metrics.GPU
+
+		name, ret := dev.GetName()
+		if ret == nvml.SUCCESS {
+			g.Name = name
+		}
+
+		mem, ret := dev.GetMemoryInfo()
+		if ret == nvml.SUCCESS {
+			g.TotalMB = float64(mem.Total) / 1024 / 1024
+			g.UsedMB = float64(mem.Used) / 1024 / 1024
+		}
+
+		util, ret := dev.GetUtilizationRates()
+		if ret == nvml.SUCCESS {
+			g.UtilPct = float64(util.Gpu)
+		}
+
+		temp, ret := dev.GetTemperature(nvml.TEMPERATURE_GPU)
+		if ret == nvml.SUCCESS {
+			g.TempC = float64(temp)
+		}
+
+		power, ret := dev.GetPowerUsage()
+		if ret == nvml.SUCCESS {
+			g.PowerW = float64(power) / 1000
+		}
+		powerLimit, ret := dev.GetEnforcedPowerLimit()
+		if ret == nvml.SUCCESS {
+			g.PowerMaxW = float64(powerLimit) / 1000
+		}
+
+		gpus = append(gpus, g)
 	}
 
-	used, err := strconv.ParseFloat(parts[1], 64)
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: parse memory.used: %w", err)
+	if len(gpus) == 0 {
+		return nil, fmt.Errorf("nvml: no GPUs found")
 	}
-	total, err := strconv.ParseFloat(parts[2], 64)
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: parse memory.total: %w", err)
-	}
-	util, err := strconv.ParseFloat(parts[3], 64)
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: parse utilization.gpu: %w", err)
-	}
-	temp, err := strconv.ParseFloat(parts[4], 64)
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: parse temperature.gpu: %w", err)
-	}
-	power, err := strconv.ParseFloat(parts[5], 64)
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: parse power.draw: %w", err)
-	}
-	powerMax, err := strconv.ParseFloat(parts[6], 64)
-	if err != nil {
-		return metrics.GPU{}, fmt.Errorf("nvidia-smi: parse power.limit: %w", err)
-	}
-
-	return metrics.GPU{
-		Name:      parts[0],
-		UsedMB:    used,
-		TotalMB:   total,
-		UtilPct:   util,
-		TempC:     temp,
-		PowerW:    power,
-		PowerMaxW: powerMax,
-	}, nil
+	return gpus, nil
 }

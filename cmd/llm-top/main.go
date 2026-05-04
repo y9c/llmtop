@@ -24,7 +24,7 @@ func main() {
 
 	cfg := config.Parse(version)
 	f := fetcher.New(5*time.Second, 3)
-	gpu := collector.NewNvidiaSMI(cfg.GPUID)
+	gpu := collector.NewNVMLCollector()
 
 	model := &ui.Model{}
 	u := app.New(cfg, f, gpu, model)
