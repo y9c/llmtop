@@ -17,8 +17,6 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: amd64
-          - os: ubuntu-24.04-arm
-            arch: arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +33,7 @@ jobs:
 
       - name: Build
         env:
-          CGO_ENABLED: '0'
+          CGO_ENABLED: '1'
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
           GOARCH=${{ matrix.arch }} GOOS=linux go build \
@@ -103,7 +101,7 @@ jobs:
           # Build release notes as a variable to avoid YAML issues
           NOTES="Auto-built from main@${SHORT_SHA}. Updated on every push."
           NOTES+=" Quick install: curl -sL https://github.com/y9c/llmtop/releases/latest/download/llmtop-linux-amd64 -o /usr/local/bin/llmtop && chmod +x /usr/local/bin/llmtop"
-          NOTES+=" For arm64, replace amd64 with arm64."
+
 
           # Wait for GitHub to sync after deleting release/tag
           sleep 3
