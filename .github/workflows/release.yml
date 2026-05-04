@@ -105,6 +105,9 @@ jobs:
           NOTES+=" Quick install: curl -sL https://github.com/y9c/llmtop/releases/latest/download/llmtop-linux-amd64 -o /usr/local/bin/llmtop && chmod +x /usr/local/bin/llmtop"
           NOTES+=" For arm64, replace amd64 with arm64."
 
+          # Wait for GitHub to sync after deleting release/tag
+          sleep 3
+
           # Create new nightly release — marked as latest so install.sh works
           gh release create "nightly" \
             llmtop-linux-* \
