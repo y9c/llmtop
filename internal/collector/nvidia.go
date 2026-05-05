@@ -9,11 +9,9 @@ import (
 )
 
 func (n *NVMLCollector) Fetch(ctx context.Context) ([]metrics.GPU, error) {
-	ret := nvml.Init()
-	if ret != nvml.SUCCESS {
-		return nil, fmt.Errorf("nvml.Init: %v", ret)
+	if err := n.ensureInit(ctx); err != nil {
+		return nil, err
 	}
-	defer nvml.Shutdown()
 
 	count, ret := nvml.DeviceGetCount()
 	if ret != nvml.SUCCESS {
@@ -61,11 +59,12 @@ func (n *NVMLCollector) Fetch(ctx context.Context) ([]metrics.GPU, error) {
 
 		power, ret := dev.GetPowerUsage()
 		if ret == nvml.SUCCESS {
-			g.PowerW = float64(power) / 1000
+			g.PowerW = float64(power)
 		}
+
 		powerLimit, ret := dev.GetEnforcedPowerLimit()
 		if ret == nvml.SUCCESS {
-			g.PowerMaxW = float64(powerLimit) / 1000
+			g.PowerMaxW = float64(powerLimit) / 1000.0
 		}
 
 		gpus = append(gpus, g)
@@ -74,5 +73,29 @@ func (n *NVMLCollector) Fetch(ctx context.Context) ([]metrics.GPU, error) {
 	if len(gpus) == 0 {
 		return nil, fmt.Errorf("nvml: no GPUs found")
 	}
+
 	return gpus, nil
+}
+
+func (n *NVMLCollector) ensureInit(ctx context.Context) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.initialized {
+		return nil
+	}
+	ret := nvml.Init()
+	if ret != nvml.SUCCESS {
+		return fmt.Errorf("nvml.Init: %v", ret)
+	}
+	n.initialized = true
+	return nil
+}
+
+func (n *NVMLCollector) Close() {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.initialized {
+		nvml.Shutdown()
+		n.initialized = false
+	}
 }

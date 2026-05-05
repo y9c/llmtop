@@ -167,7 +167,7 @@ type chartDef struct {
 	name   string
 	vals   []float64
 	width  int // total width including y-axis labels (~9 chars)
-	height int // number of body rows, capped at 5, min 3
+	height int // number of body rows, capped at 6, min 3
 	style  lipgloss.Style
 }
 
@@ -178,8 +178,8 @@ func chartLines(def chartDef) []string {
 	if h < 3 {
 		h = 3
 	}
-	if h > 5 {
-		h = 5
+	if h > 6 {
+		h = 6
 	}
 	if len(def.vals) < 2 {
 		out := make([]string, h)
@@ -639,25 +639,5 @@ func formatDuration(d time.Duration) string {
 }
 
 var durBuf = make([]byte, 0, 16)
-var latBuf = make([]byte, 0, 32)
 
-func avgRecent(hist []float64, n int) float64 {
-	sum := 0.0
-	count := 0
-	for i := len(hist) - 1; i >= 0 && count < n; i-- {
-		sum += hist[i]
-		count++
-	}
-	if count == 0 {
-		return 0
-	}
-	return sum / float64(count)
-}
-
-func formatLatency(ms float64) string {
-	b := latBuf[:0]
-	b = strconv.AppendFloat(b, ms, 'f', 0, 64)
-	b = append(b, "ms"...)
-	return styleTag.Render(string(b))
-}
 

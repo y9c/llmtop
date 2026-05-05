@@ -7,15 +7,6 @@ import (
 	"github.com/y9c/llmtop/internal/metrics"
 )
 
-type LatencyStats struct {
-	TTFTMinMs  float64
-	TTFTAvgMs  float64
-	TTFTMaxMs  float64
-	TPOTMinMs  float64
-	TPOTAvgMs  float64
-	TPOTMaxMs  float64
-}
-
 type TickMsg struct {
 	Backend  string
 	GPUName  string
@@ -27,7 +18,6 @@ type TickMsg struct {
 	MemHist  []float64
 	UtilHist []float64
 	KVHist   []float64
-	Latency  LatencyStats
 }
 
 type Model struct {
@@ -41,7 +31,6 @@ type Model struct {
 	MemHist  []float64
 	UtilHist []float64
 	KVHist   []float64
-	Latency  LatencyStats
 	Width    int
 	Height   int
 	Scroll   int // viewport scroll offset (lines from top)
@@ -81,7 +70,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.MemHist = msg.MemHist
 		m.UtilHist = msg.UtilHist
 		m.KVHist = msg.KVHist
-		m.Latency = msg.Latency
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":

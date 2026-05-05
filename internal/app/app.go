@@ -41,16 +41,6 @@ type App struct {
 	startAt  time.Time
 	gpuName  string
 
-	// Session-wide latency tracking
-	ttftMinS  float64
-	ttftMaxS  float64
-	ttftSumS  float64
-	ttftN     float64
-	tpotMinS  float64
-	tpotMaxS  float64
-	tpotSumS  float64
-	tpotN     float64
-
 	// Last valid instantaneous values (held across ticks that have no new data)
 	lastInstDec  float64
 	lastInstPre  float64
@@ -113,15 +103,18 @@ func (a *App) tick(ctx context.Context) {
 }
 
 func (a *App) doFetch(ctx context.Context) {
-	fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
+	gpuCtx, gpuCancel := context.WithTimeout(ctx, 3*time.Second)
+	defer gpuCancel()
 
-	gpuList, gpuErr := a.gpu.Fetch(fetchCtx)
+	gpuList, gpuErr := a.gpu.Fetch(gpuCtx)
 	if gpuErr == nil && a.gpuName == "" && len(gpuList) > 0 {
 		a.gpuName = gpuList[0].Name
 	}
 
-	body, httpErr := a.fetcher.Fetch(fetchCtx, a.cfg.MetricsURL())
+	httpCtx, httpCancel := context.WithTimeout(ctx, 3*time.Second)
+	defer httpCancel()
+
+	body, httpErr := a.fetcher.Fetch(httpCtx, a.cfg.MetricsURL())
 
 	if a.cfg.Backend != "auto" && a.backend == nil {
 		a.backend = backend.ByName(a.cfg.Backend)
@@ -177,30 +170,10 @@ func (a *App) doFetch(ctx context.Context) {
 
 		// Track per-sample TTFT/TPOT from histogram deltas
 		if ttftN := snap.TTFTCount - a.prevSnap.TTFTCount; ttftN > 0 {
-			ttftS := (snap.TTFTTotalS - a.prevSnap.TTFTTotalS) / ttftN
-			if a.ttftN == 0 {
-				a.ttftMinS = ttftS
-				a.ttftMaxS = ttftS
-			} else {
-				if ttftS < a.ttftMinS { a.ttftMinS = ttftS }
-				if ttftS > a.ttftMaxS { a.ttftMaxS = ttftS }
-			}
-			a.ttftSumS += ttftS * ttftN
-			a.ttftN += ttftN
-			a.lastInstTTFT = ttftS * 1000 // ms
+			a.lastInstTTFT = (snap.TTFTTotalS - a.prevSnap.TTFTTotalS) / ttftN * 1000
 		}
 		if tpotN := snap.TPOTCount - a.prevSnap.TPOTCount; tpotN > 0 {
-			tpotS := (snap.TPOTTotalS - a.prevSnap.TPOTTotalS) / tpotN
-			if a.tpotN == 0 {
-				a.tpotMinS = tpotS
-				a.tpotMaxS = tpotS
-			} else {
-				if tpotS < a.tpotMinS { a.tpotMinS = tpotS }
-				if tpotS > a.tpotMaxS { a.tpotMaxS = tpotS }
-			}
-			a.tpotSumS += tpotS * tpotN
-			a.tpotN += tpotN
-			a.lastInstTPOT = tpotS * 1000 // ms
+			a.lastInstTPOT = (snap.TPOTTotalS - a.prevSnap.TPOTTotalS) / tpotN * 1000
 		}
 	}
 	a.prevSnap = snap
@@ -235,18 +208,6 @@ func (a *App) doFetch(ctx context.Context) {
 		delta.PreCumAvg = a.preCumSum / a.preCumCount
 	}
 
-	lat := ui.LatencyStats{}
-	if a.ttftN > 0 {
-		lat.TTFTMinMs = a.ttftMinS * 1000
-		lat.TTFTAvgMs = a.ttftSumS / a.ttftN * 1000
-		lat.TTFTMaxMs = a.ttftMaxS * 1000
-	}
-	if a.tpotN > 0 {
-		lat.TPOTMinMs = a.tpotMinS * 1000
-		lat.TPOTAvgMs = a.tpotSumS / a.tpotN * 1000
-		lat.TPOTMaxMs = a.tpotMaxS * 1000
-	}
-
 	if gpuErr == nil && snap.GPUMemTotalMB > 0 {
 		a.memHist.Push(snap.GPUUsedMB / snap.GPUMemTotalMB * 100)
 	}
@@ -275,6 +236,5 @@ func (a *App) doFetch(ctx context.Context) {
 		MemHist: a.memHist.ValuesInto(a.memBuf),
 		UtilHist: a.utilHist.ValuesInto(a.utilBuf),
 		KVHist:   a.kvHist.ValuesInto(a.kvBuf),
-		Latency:  lat,
 	})
 }
