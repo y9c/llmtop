@@ -45,6 +45,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
+		m.Scroll = 0
 	case TickMsg:
 		m.Backend = msg.Backend
 		m.GPUName = msg.GPUName

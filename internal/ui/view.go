@@ -178,8 +178,8 @@ func chartLines(def chartDef) []string {
 	if h <= 0 {
 		h = 1
 	}
-	if h > 6 {
-		h = 6
+	if h > 12 {
+		h = 12
 	}
 	if len(def.vals) < 2 {
 		out := make([]string, h)
@@ -272,7 +272,6 @@ func (m Model) buildView() string {
 	d := m.Delta
 	w := m.Width
 	if w <= 0 { w = 80 }
-	if w > 88 { w = 88 }
 
 	chr := 0.0
 	if s.PrefixCacheQueries > 0 { chr = s.PrefixCacheHits / s.PrefixCacheQueries * 100 }
@@ -439,15 +438,14 @@ func (m Model) buildView() string {
 
 	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
 	// Compute chart height AFTER table, so we know actual table row count
-	// Wide (≥80): title(1) + table(2+nr) + hline(1) + chart(ch) + blank(1) + chart(ch) + footer(1) = 6+nr+2*ch ≤ Height
-	// → ch ≤ (Height-6-nr)/2
-	// Narrow (<80): title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 8+nr+4*ch ≤ Height
-	// → ch ≤ (Height-8-nr)/4
+	// asciigraph.Plot(height) produces height+1 rows (body + baseline), so each block is ch+1 rows
+	// Wide: title(1) + table(2+nr) + hline(1) + block(ch+1) + gap(1) + block(ch+1) + footer(1) = 8+nr+2*ch ≤ Height
+	// Narrow: title(1) + table(2+nr) + hline(1) + 4×block(ch+1) + 3×gap(3) + footer(1) = 12+nr+4*ch ≤ Height
 	ch := 0
 	if w >= 80 {
-		if h := (m.Height - 6 - nr) / 2; h > 0 { ch = h }
+		if h := (m.Height - 8 - nr) / 2; h > 0 { ch = h }
 	} else {
-		if h := (m.Height - 8 - nr) / 4; h > 0 { ch = h }
+		if h := (m.Height - 12 - nr) / 4; h > 0 { ch = h }
 	}
 	if ch > 6 { ch = 6 }
 	if ch == 0 {
