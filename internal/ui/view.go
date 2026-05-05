@@ -440,8 +440,7 @@ func (m Model) buildView() string {
 	p(twoColBot(lW2, rW2))
 
 	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
-	// Compute chart height AFTER table, so we know actual table row count
-	// chartLines returns exactly ch rows now
+	// chartLines now returns exactly ch rows (trimmed/padded)
 	// Wide: title(1) + table(2+nr) + hline(1) + chart(ch) + gap(1) + chart(ch) + footer(1) = 6+nr+2*ch ≤ Height
 	// Narrow: title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 9+nr+4*ch ≤ Height
 	ch := 0
@@ -503,15 +502,17 @@ func (m Model) buildView() string {
 	if len(all) <= m.Height || m.Height <= 0 {
 		return full
 	}
-	end := m.Scroll + m.Height
-	if end > len(all) {
-		end = len(all)
-	}
-	if m.Scroll >= len(all) {
-		m.Scroll = len(all) - m.Height
-		end = len(all)
-	}
-	return strings.Join(all[m.Scroll:end], "\n") + "\n"
+	// Clamp scroll: preserve user scroll but never go below 0 or beyond content
+	scroll := m.Scroll
+	if scroll < 0 { scroll = 0 }
+	maxScroll := len(all) - m.Height
+	if scroll > maxScroll { scroll = maxScroll }
+	if scroll < 0 { scroll = 0 }
+	// Safety: always ensure title line (index 0) is in view on initial renders
+	if m.Width <= 0 { scroll = 0 }
+	end := scroll + m.Height
+	if end > len(all) { end = len(all) }
+	return strings.Join(all[scroll:end], "\n") + "\n"
 }
 
 func iline(content string, innerW int) string {
