@@ -36,20 +36,6 @@ type Model struct {
 	Scroll   int // viewport scroll offset (lines from top)
 }
 
-func (m Model) chartHeight() int {
-	// Overhead: title(1) + sep(1) + tp table(top1+rows4+bot1) + chart block(top1+gap1+bot1) ≈ 11
-	// Remaining rows split into 2 chart blocks (Util+KV and Dec+Mem), each block gets half.
-	avail := m.Height - 11
-	if avail < 4 {
-		return 0 // no room for charts
-	}
-	h := avail / 2
-	if h > 6 {
-		h = 6
-	}
-	return h
-}
-
 func (m Model) Init() tea.Cmd { return nil }
 
 var _ tea.Model = (*Model)(nil)

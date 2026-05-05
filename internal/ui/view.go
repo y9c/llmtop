@@ -175,8 +175,8 @@ type chartDef struct {
 // Each line is padded/truncated to exactly def.width display characters.
 func chartLines(def chartDef) []string {
 	h := def.height
-	if h < 3 {
-		h = 3
+	if h <= 0 {
+		h = 1
 	}
 	if h > 6 {
 		h = 6
@@ -317,7 +317,6 @@ func (m Model) buildView() string {
 		}
 	}
 	p(styleTitle.Render(string(tb)))
-	p(sepLine(w))
 
 	// Two-column: Throughput (4/9) + Speculative/Prefetch (5/9)
 	colW := (innerW - 3) * 4 / 9
@@ -439,8 +438,21 @@ func (m Model) buildView() string {
 	p(twoColBot(lW2, rW2))
 
 	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
-	ch := m.chartHeight()
+	// Compute chart height AFTER table, so we know actual table row count
+	// Wide (≥80): title(1) + table(2+nr) + hline(1) + chart(ch) + blank(1) + chart(ch) + footer(1) = 7+nr+2*ch ≤ Height
+	// → ch ≤ (Height-7-nr)/2
+	// Narrow (<80): title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 8+nr+4*ch ≤ Height
+	// → ch ≤ (Height-8-nr)/4
+	ch := 0
 	if w >= 80 {
+		if h := (m.Height - 7 - nr) / 2; h > 0 { ch = h }
+	} else {
+		if h := (m.Height - 8 - nr) / 4; h > 0 { ch = h }
+	}
+	if ch > 6 { ch = 6 }
+	if ch == 0 {
+		p(footerLine(w))
+	} else if w >= 80 {
 		// 2×2 grid
 		half := (innerW - 2) / 2 // gap=2 between columns
 		defs1 := []chartDef{
