@@ -60,8 +60,12 @@ type Snapshot struct {
 
 // Deltas holds per-second rates computed from two Snapshots.
 type Deltas struct {
-	DecodeTokS  float64
-	PrefillTokS float64
+	DecodeTokS  float64 // instantaneous decode tok/s (holds last valid value)
+	PrefillTokS float64 // instantaneous prefill tok/s (holds last valid value)
+	DecCumAvg   float64 // cumulative average decode tok/s (only active ticks)
+	PreCumAvg   float64 // cumulative average prefill tok/s (only active ticks)
+	TTFTMs      float64 // instantaneous TTFT ms from last sample (holds last valid value)
+	TPOTMs      float64 // instantaneous TPOT ms from last sample (holds last valid value)
 	AcceptRate  float64
 }
 
@@ -80,7 +84,7 @@ type GPU struct {
 
 // IsEmpty returns true if this snapshot has no data yet.
 func (s Snapshot) IsEmpty() bool {
-	return s.GenTokensTotal == 0 && s.SpecDraftsTotal == 0
+	return s.GenTokensTotal == 0 && s.SpecDraftsTotal == 0 && s.PromptTokensTotal == 0
 }
 
 // ComputeDelta computes Deltas from two sequential snapshots.

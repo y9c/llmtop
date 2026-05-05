@@ -82,7 +82,7 @@ func checkPipes(t *testing.T, lines []string, cw int) {
 	}
 }
 
-// Replace ANSI escape sequences with 'X' markers for consistent width measurement
+// Strip ANSI escape sequences for width measurement (ANSI has 0 visible width).
 func ansiToX(s string) string {
 	var out strings.Builder
 	in := false
@@ -93,7 +93,7 @@ func ansiToX(s string) string {
 		if in {
 			if r == 'm' {
 				in = false
-				out.WriteRune('█') // 1 char replacement
+				// ANSI sequence contributes 0 to visible width — emit nothing
 			}
 			continue
 		}
@@ -139,21 +139,14 @@ func buildTestModel(w int) Model {
 			PrefixCacheQueries: 500000,
 			SpecAcceptedPos:   []float64{8300, 6000, 4400, 3400, 2600},
 		},
-		Delta:   metrics.Deltas{DecodeTokS: 48.0, PrefillTokS: 0.0, AcceptRate: 0.486},
+		Delta:   metrics.Deltas{DecodeTokS: 48.0, PrefillTokS: 0.0, DecCumAvg: 42.5, PreCumAvg: 289.3, AcceptRate: 0.486},
 		Uptime:  20 * time.Second,
 		DecHist: []float64{10, 20, 30, 25, 15, 5, 15, 25, 35, 42, 48, 45, 38, 28, 18},
 		MemHist: []float64{96, 97, 97, 96, 97, 97, 97, 96, 97, 97, 97, 96, 97, 97, 97},
 		UtilHist: []float64{10, 30, 50, 70, 90, 95, 97, 96, 98, 97, 95, 90, 80, 60, 40},
 		KVHist:  []float64{0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70},
 		Width:   w,
-	}
-}
-
-func BenchmarkBuildView(b *testing.B) {
-	m := buildTestModel(88)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = m.buildView()
+		Height: 30,
 	}
 }
 

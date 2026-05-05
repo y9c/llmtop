@@ -6,7 +6,7 @@ LDFLAGS = -ldflags="-s -w -X main.version=$(VERSION)"
 CMD = ./cmd/llm-top
 
 build:
-	CGO_ENABLED=0 go build $(LDFLAGS) -trimpath -o $(BINARY) $(CMD)
+	CGO_ENABLED=1 go build $(LDFLAGS) -trimpath -o $(BINARY) $(CMD)
 
 bench:
 	go test -bench=. -benchmem -count=3 ./internal/ui/...

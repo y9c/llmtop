@@ -50,6 +50,18 @@ type App struct {
 	tpotMaxS  float64
 	tpotSumS  float64
 	tpotN     float64
+
+	// Last valid instantaneous values (held across ticks that have no new data)
+	lastInstDec  float64
+	lastInstPre  float64
+	lastInstTTFT float64
+	lastInstTPOT float64
+
+	// Cumulative average (only ticks with new activity)
+	decCumSum   float64
+	decCumCount float64
+	preCumSum   float64
+	preCumCount float64
 }
 
 func New(cfg *config.Config, f *fetcher.Fetcher, gpu collector.GPUCollector, m *ui.Model) *App {
@@ -175,6 +187,7 @@ func (a *App) doFetch(ctx context.Context) {
 			}
 			a.ttftSumS += ttftS * ttftN
 			a.ttftN += ttftN
+			a.lastInstTTFT = ttftS * 1000 // ms
 		}
 		if tpotN := snap.TPOTCount - a.prevSnap.TPOTCount; tpotN > 0 {
 			tpotS := (snap.TPOTTotalS - a.prevSnap.TPOTTotalS) / tpotN
@@ -187,11 +200,39 @@ func (a *App) doFetch(ctx context.Context) {
 			}
 			a.tpotSumS += tpotS * tpotN
 			a.tpotN += tpotN
+			a.lastInstTPOT = tpotS * 1000 // ms
 		}
 	}
 	a.prevSnap = snap
 	if !snap.IsEmpty() {
 		a.prevSet = true
+	}
+
+	// Carry last valid instantaneous values (don't reset to 0 on idle ticks)
+	if delta.DecodeTokS > 0 {
+		a.lastInstDec = delta.DecodeTokS
+		a.decCumSum += delta.DecodeTokS
+		a.decCumCount++
+	} else {
+		delta.DecodeTokS = a.lastInstDec
+	}
+	if delta.PrefillTokS > 0 {
+		a.lastInstPre = delta.PrefillTokS
+		a.preCumSum += delta.PrefillTokS
+		a.preCumCount++
+	} else {
+		delta.PrefillTokS = a.lastInstPre
+	}
+	delta.TTFTMs = a.lastInstTTFT
+	delta.TPOTMs = a.lastInstTPOT
+
+	delta.DecCumAvg = 0
+	if a.decCumCount > 0 {
+		delta.DecCumAvg = a.decCumSum / a.decCumCount
+	}
+	delta.PreCumAvg = 0
+	if a.preCumCount > 0 {
+		delta.PreCumAvg = a.preCumSum / a.preCumCount
 	}
 
 	lat := ui.LatencyStats{}

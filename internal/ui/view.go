@@ -35,6 +35,10 @@ var (
 	styleValCyan   = lipgloss.NewStyle().Foreground(lipgloss.Color("#38bdf8")).Bold(true)
 	styleValOrange = lipgloss.NewStyle().Foreground(lipgloss.Color("#fb923c")).Bold(true)
 	styleValGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ade80")).Bold(true)
+	styleParen     = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+	styleAvgCyan   = lipgloss.NewStyle().Foreground(lipgloss.Color("#1e6b8a")).Bold(true)
+	styleAvgOrange = lipgloss.NewStyle().Foreground(lipgloss.Color("#a85d1a")).Bold(true)
+	styleAvgGreen  = lipgloss.NewStyle().Foreground(lipgloss.Color("#2d7a4a")).Bold(true)
 	styleValPurple = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc")).Bold(true)
 	styleValYellow = lipgloss.NewStyle().Foreground(lipgloss.Color("#fbbf24")).Bold(true)
 	styleValRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("#f87171")).Bold(true)
@@ -160,22 +164,35 @@ var titleBuf = make([]byte, 0, 128)
 var footBuf = make([]byte, 0, 128)
 
 type chartDef struct {
-	name  string
-	vals  []float64
-	width int // total width including y-axis labels (~9 chars)
-	style lipgloss.Style
+	name   string
+	vals   []float64
+	width  int // total width including y-axis labels (~9 chars)
+	height int // number of body rows, capped at 5, min 3
+	style  lipgloss.Style
 }
 
 // chartLines returns body lines of an asciigraph chart.
 // Each line is padded/truncated to exactly def.width display characters.
 func chartLines(def chartDef) []string {
+	h := def.height
+	if h < 3 {
+		h = 3
+	}
+	if h > 5 {
+		h = 5
+	}
 	if len(def.vals) < 2 {
-		return []string{"--", spaceStr(def.width), spaceStr(def.width), spaceStr(def.width), spaceStr(def.width)}
+		out := make([]string, h)
+		out[0] = "--"
+		for i := 1; i < h; i++ {
+			out[i] = spaceStr(def.width)
+		}
+		return out
 	}
 	// Reserve 10 chars for y-axis labels (e.g. "  100.00 ┤")
 	plotW := def.width - 10
 	if plotW < 10 { plotW = 10 }
-	g := asciigraph.Plot(def.vals, asciigraph.Height(5), asciigraph.Width(plotW))
+	g := asciigraph.Plot(def.vals, asciigraph.Height(h), asciigraph.Width(plotW))
 
 	var out []string
 	start := 0
@@ -189,11 +206,11 @@ func chartLines(def chartDef) []string {
 	if start < len(g) {
 		out = append(out, renderChartRow(g[start:], def))
 	}
-	// Pad to fixed 5 body rows
-	for len(out) < 5 {
+	// Pad to at least h body rows
+	for len(out) < h {
 		out = append(out, spaceStr(def.width))
 	}
-	return out[:5]
+	return out
 }
 
 func renderChartRow(row string, def chartDef) string {
@@ -226,14 +243,25 @@ func emitChartBlock(p func(string), defs []chartDef, innerW int) {
 		allLines[i] = chartLines(def)
 	}
 
+	// Use the max height across all charts
+	chartH := 0
+	for _, lines := range allLines {
+		if len(lines) > chartH {
+			chartH = len(lines)
+		}
+	}
 	gap := "  "
-	for r := 0; r < 5; r++ {
+	for r := 0; r < chartH; r++ {
 		var b strings.Builder
 		for c, lines := range allLines {
 			if c > 0 {
 				b.WriteString(gap)
 			}
-			b.WriteString(lines[r])
+			if r < len(lines) {
+				b.WriteString(lines[r])
+			} else {
+				b.WriteString(spaceStr(defs[c].width))
+			}
 		}
 		p(iline(b.String(), innerW))
 	}
@@ -291,95 +319,64 @@ func (m Model) buildView() string {
 	p(styleTitle.Render(string(tb)))
 	p(sepLine(w))
 
-	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
-	if w >= 80 {
-		// 2×2 grid
-		half := (innerW - 2) / 2 // gap=2 between columns
-		defs1 := []chartDef{
-			{"Util", m.UtilHist, half, styleUtilChart},
-			{"KV", m.KVHist, half, styleKVChart},
-		}
-		defs2 := []chartDef{
-			{"Dec", m.DecHist, half, styleDecChart},
-			{"Mem", m.MemHist, half, styleMemChart},
-		}
-		var names []string
-		for _, d := range defs1 {
-			names = append(names, d.style.Render(d.name))
-		}
-		for _, d := range defs2 {
-			names = append(names, d.style.Render(d.name))
-		}
-		p(hline(w, "", names...))
-		emitChartBlock(p, defs1, innerW)
-		p(iline("", innerW)) // blank line between chart rows
-		emitChartBlock(p, defs2, innerW)
-	} else {
-		// Vertical stack: each chart on its own with a blank line in between
-		defs := []chartDef{
-			{"Util", m.UtilHist, innerW, styleUtilChart},
-			{"KV", m.KVHist, innerW, styleKVChart},
-			{"Dec", m.DecHist, innerW, styleDecChart},
-			{"Mem", m.MemHist, innerW, styleMemChart},
-		}
-		var names []string
-		for _, d := range defs {
-			names = append(names, d.style.Render(d.name))
-		}
-		p(hline(w, "", names...))
-		for i, def := range defs {
-			if i > 0 {
-				p(iline("", innerW)) // blank line between charts
-			}
-			emitChartBlock(p, []chartDef{def}, innerW)
-		}
-	}
-	p(footerLine(w))
-
-	// Two-column: Throughput + Speculative/Prefetch
-	colW := (innerW - 3) * 2 / 5
+	// Two-column: Throughput (4/9) + Speculative/Prefetch (5/9)
+	colW := (innerW - 3) * 4 / 9
 	lW2 := colW
 	rW2 := innerW - 3 - colW
-
-	// Tags are package-level vars, pre-rendered at init — no per-frame Render calls
 
 	var tpRows, spRows []string
 
 	// --- Left column rows ---
+	// Layout:
+	//   Row 1: run/wait          (instant)
+	//   Row 2: pre/dec           instant(lifecycle_avg)
+	//   Row 3: ttft/tpot         instant(lifecycle_avg)
+	//   Row 4: prm/gen/up        lifecycle totals
 
-	// Row 1: run/wait + uptime
+	// Row 1: run/wait
 	rr := colorValInline(s.RunningReqs, 3, 0)
 	wr := colorValInline(s.WaitingReqs, 3, 0)
-	tpRows = append(tpRows, tagRun+" "+rr+"  "+tagWait+" "+wr+"  "+tagUp+" "+uptime)
+	tpRows = append(tpRows, tagRun+" "+rr+"  "+tagWait+" "+wr)
 
-	// Row 2: dec/pre (bright cyan) — instant(rolling_avg)
-	dt := styleValCyan.Render(fmt.Sprintf("%.1f(%.0f)", d.DecodeTokS, avgRecent(m.DecHist, 5)))
-	pt := styleValCyan.Render(fmt.Sprintf("%.1f(%.0f)", d.PrefillTokS, avgRecent(m.PreHist, 5)))
-	tpRows = append(tpRows, tagDec+" "+dt+"  "+tagPre+" "+pt)
-
-	// Row 3: gen/prm totals
-	tpRows = append(tpRows, tagGen+" "+fmtNum(s.GenTokensTotal)+"  "+
-		tagPrm+" "+fmtNum(s.PromptTokensTotal))
-
-	// Row 4: ttft/tpot + session latency (if available)
-	if s.TTFTCount > 0 {
-		row4 := ""
-		avgTTFT := s.TTFTTotalS / s.TTFTCount * 1000
-		avgTPOT := s.TPOTTotalS / s.TPOTCount * 1000
-		ttft := styleValOrange.Render(fmt.Sprintf("%.0fms", avgTTFT))
-		tpot := styleValGreen.Render(fmt.Sprintf("%.0fms", avgTPOT))
-		row4 = tagTTFT + " " + ttft + "  " + tagTPOT + " " + tpot
-		if m.Latency.TTFTAvgMs > 0 {
-			ttftStr := styleValOrange.Render(fmt.Sprintf("%.0f/%.0f/%.0f", m.Latency.TTFTMinMs, m.Latency.TTFTAvgMs, m.Latency.TTFTMaxMs))
-			tpotStr := styleValGreen.Render(fmt.Sprintf("%.0f/%.0f/%.0f", m.Latency.TPOTMinMs, m.Latency.TPOTAvgMs, m.Latency.TPOTMaxMs))
-			row4 += "  ttft " + ttftStr + "  tpot " + tpotStr
-		}
-		tpRows = append(tpRows, row4)
-	} else if m.Latency.TTFTAvgMs > 0 {
-		ttftStr := styleValOrange.Render(fmt.Sprintf("%.0f/%.0f/%.0f", m.Latency.TTFTMinMs, m.Latency.TTFTAvgMs, m.Latency.TTFTMaxMs))
-		tpotStr := styleValGreen.Render(fmt.Sprintf("%.0f/%.0f/%.0f", m.Latency.TPOTMinMs, m.Latency.TPOTAvgMs, m.Latency.TPOTMaxMs))
-		tpRows = append(tpRows, "ttft "+ttftStr+"  tpot "+tpotStr)
+	// Row 2: pre/dec — instant(cumulative_avg)
+	preAvgStr := "-"
+	decAvgStr := "-"
+	if d.PreCumAvg > 0 {
+		preAvgStr = fmt.Sprintf("%.0f", d.PreCumAvg)
 	}
+	if d.DecCumAvg > 0 {
+		decAvgStr = fmt.Sprintf("%.0f", d.DecCumAvg)
+	}
+	preInst := styleValCyan.Render(fmt.Sprintf("%.0f", d.PrefillTokS))
+	preAvg := styleParen.Render("(") + styleAvgCyan.Render(preAvgStr) + styleParen.Render(")")
+	decInst := styleValCyan.Render(fmt.Sprintf("%.0f", d.DecodeTokS))
+	decAvg := styleParen.Render("(") + styleAvgCyan.Render(decAvgStr) + styleParen.Render(")")
+	tpRows = append(tpRows, tagPre+" "+preInst+preAvg+"  "+tagDec+" "+decInst+decAvg)
+
+	// Row 3: ttft/tpot — instant(lifecycle_avg)
+	ttftLifeStr := ""
+	tpotLifeStr := ""
+	if s.TTFTCount > 0 {
+		ttftLifeStr = fmt.Sprintf("%.0f", s.TTFTTotalS/s.TTFTCount*1000)
+	}
+	if s.TPOTCount > 0 {
+		tpotLifeStr = fmt.Sprintf("%.0f", s.TPOTTotalS/s.TPOTCount*1000)
+	}
+	if ttftLifeStr == "" {
+		ttftLifeStr = "-"
+	}
+	if tpotLifeStr == "" {
+		tpotLifeStr = "-"
+	}
+	ttftLife := styleParen.Render("(") + styleAvgOrange.Render(ttftLifeStr) + styleParen.Render(")")
+	tpotLife := styleParen.Render("(") + styleAvgGreen.Render(tpotLifeStr) + styleParen.Render(")")
+	ttftInst := styleValOrange.Render(fmt.Sprintf("%.0fms", d.TTFTMs))
+	tpotInst := styleValGreen.Render(fmt.Sprintf("%.0fms", d.TPOTMs))
+	tpRows = append(tpRows, tagTTFT+" "+ttftInst+ttftLife+"  "+tagTPOT+" "+tpotInst+tpotLife)
+
+	// Row 4: prm/gen/up — lifecycle totals
+	tpRows = append(tpRows, tagPrm+" "+fmtNum(s.PromptTokensTotal)+"  "+
+		tagGen+" "+fmtNum(s.GenTokensTotal)+"  "+tagUp+" "+uptime)
 
 	// --- Right column rows ---
 
@@ -441,7 +438,67 @@ func (m Model) buildView() string {
 	}
 	p(twoColBot(lW2, rW2))
 
-	return out.String()
+	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
+	ch := m.chartHeight()
+	if w >= 80 {
+		// 2×2 grid
+		half := (innerW - 2) / 2 // gap=2 between columns
+		defs1 := []chartDef{
+			{"Util", m.UtilHist, half, ch, styleUtilChart},
+			{"KV", m.KVHist, half, ch, styleKVChart},
+		}
+		defs2 := []chartDef{
+			{"Dec", m.DecHist, half, ch, styleDecChart},
+			{"Mem", m.MemHist, half, ch, styleMemChart},
+		}
+		var names []string
+		for _, d := range defs1 {
+			names = append(names, d.style.Render(d.name))
+		}
+		for _, d := range defs2 {
+			names = append(names, d.style.Render(d.name))
+		}
+		p(hline(w, "", names...))
+		emitChartBlock(p, defs1, innerW)
+		p(iline("", innerW)) // blank line between chart rows
+		emitChartBlock(p, defs2, innerW)
+	} else {
+		// Vertical stack: each chart on its own with a blank line in between
+		defs := []chartDef{
+			{"Util", m.UtilHist, innerW, ch, styleUtilChart},
+			{"KV", m.KVHist, innerW, ch, styleKVChart},
+			{"Dec", m.DecHist, innerW, ch, styleDecChart},
+			{"Mem", m.MemHist, innerW, ch, styleMemChart},
+		}
+		var names []string
+		for _, d := range defs {
+			names = append(names, d.style.Render(d.name))
+		}
+		p(hline(w, "", names...))
+		for i, def := range defs {
+			if i > 0 {
+				p(iline("", innerW)) // blank line between charts
+			}
+			emitChartBlock(p, []chartDef{def}, innerW)
+		}
+	}
+	p(footerLine(w))
+
+	// Scrollable viewport: trim to terminal height if content is taller
+	full := out.String()
+	all := strings.Split(strings.TrimSuffix(full, "\n"), "\n")
+	if len(all) <= m.Height || m.Height <= 0 {
+		return full
+	}
+	end := m.Scroll + m.Height
+	if end > len(all) {
+		end = len(all)
+	}
+	if m.Scroll >= len(all) {
+		m.Scroll = len(all) - m.Height
+		end = len(all)
+	}
+	return strings.Join(all[m.Scroll:end], "\n") + "\n"
 }
 
 func iline(content string, innerW int) string {

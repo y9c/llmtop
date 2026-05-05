@@ -43,6 +43,22 @@ type Model struct {
 	KVHist   []float64
 	Latency  LatencyStats
 	Width    int
+	Height   int
+	Scroll   int // viewport scroll offset (lines from top)
+}
+
+func (m Model) chartHeight() int {
+	// Overhead: title(1) + sep(1) + tp table(top1+rows4+bot1) + chart block(top1+gap1+bot1) ≈ 11
+	// Remaining rows split into 2 chart blocks (Util+KV and Dec+Mem), each block gets half.
+	avail := m.Height - 11
+	if avail < 4 {
+		return 0 // no room for charts
+	}
+	h := avail / 2
+	if h > 6 {
+		h = 6
+	}
+	return h
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -53,6 +69,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
+		m.Height = msg.Height
 	case TickMsg:
 		m.Backend = msg.Backend
 		m.GPUName = msg.GPUName
@@ -69,6 +86,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "up", "k":
+			if m.Scroll > 0 {
+				m.Scroll--
+			}
+		case "down", "j":
+			m.Scroll++
 		}
 	}
 	return m, nil
