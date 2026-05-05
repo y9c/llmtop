@@ -206,9 +206,12 @@ func chartLines(def chartDef) []string {
 	if start < len(g) {
 		out = append(out, renderChartRow(g[start:], def))
 	}
-	// Pad to at least h body rows
+	// Pad or trim to exactly h body rows
 	for len(out) < h {
 		out = append(out, spaceStr(def.width))
+	}
+	if len(out) > h {
+		out = out[:h]
 	}
 	return out
 }
@@ -438,14 +441,14 @@ func (m Model) buildView() string {
 
 	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
 	// Compute chart height AFTER table, so we know actual table row count
-	// asciigraph.Plot(height) produces height+1 rows (body + baseline), so each block is ch+1 rows
-	// Wide: title(1) + table(2+nr) + hline(1) + block(ch+1) + gap(1) + block(ch+1) + footer(1) = 8+nr+2*ch ≤ Height
-	// Narrow: title(1) + table(2+nr) + hline(1) + 4×block(ch+1) + 3×gap(3) + footer(1) = 12+nr+4*ch ≤ Height
+	// chartLines returns exactly ch rows now
+	// Wide: title(1) + table(2+nr) + hline(1) + chart(ch) + gap(1) + chart(ch) + footer(1) = 6+nr+2*ch ≤ Height
+	// Narrow: title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 9+nr+4*ch ≤ Height
 	ch := 0
 	if w >= 80 {
-		if h := (m.Height - 8 - nr) / 2; h > 0 { ch = h }
+		if h := (m.Height - 6 - nr) / 2; h > 0 { ch = h }
 	} else {
-		if h := (m.Height - 12 - nr) / 4; h > 0 { ch = h }
+		if h := (m.Height - 9 - nr) / 4; h > 0 { ch = h }
 	}
 	if ch > 6 { ch = 6 }
 	if ch == 0 {
