@@ -439,13 +439,13 @@ func (m Model) buildView() string {
 
 	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
 	// Compute chart height AFTER table, so we know actual table row count
-	// Wide (≥80): title(1) + table(2+nr) + hline(1) + chart(ch) + blank(1) + chart(ch) + footer(1) = 7+nr+2*ch ≤ Height
-	// → ch ≤ (Height-7-nr)/2
+	// Wide (≥80): title(1) + table(2+nr) + hline(1) + chart(ch) + blank(1) + chart(ch) + footer(1) = 6+nr+2*ch ≤ Height
+	// → ch ≤ (Height-6-nr)/2
 	// Narrow (<80): title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 8+nr+4*ch ≤ Height
 	// → ch ≤ (Height-8-nr)/4
 	ch := 0
 	if w >= 80 {
-		if h := (m.Height - 7 - nr) / 2; h > 0 { ch = h }
+		if h := (m.Height - 6 - nr) / 2; h > 0 { ch = h }
 	} else {
 		if h := (m.Height - 8 - nr) / 4; h > 0 { ch = h }
 	}
