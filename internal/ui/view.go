@@ -441,13 +441,16 @@ func (m Model) buildView() string {
 
 	// Charts box: 4 mini timelines (Util, KV, Dec, Mem)
 	// chartLines now returns exactly ch rows (trimmed/padded)
-	// Wide: title(1) + table(2+nr) + hline(1) + chart(ch) + gap(1) + chart(ch) + footer(1) = 6+nr+2*ch ≤ Height
-	// Narrow: title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 9+nr+4*ch ≤ Height
+	// Leave 2 rows of margin for terminal chrome (title bar / status line)
+	// Wide: title(1) + table(2+nr) + hline(1) + chart(ch) + gap(1) + chart(ch) + footer(1) = 6+nr+2*ch ≤ Height-2
+	// Narrow: title(1) + table(2+nr) + hline(1) + 4×chart(ch) + 3×gap(3) + footer(1) = 9+nr+4*ch ≤ Height-2
+	availH := m.Height - 2
+	if availH < 8 { availH = m.Height } // too small, use full height
 	ch := 0
 	if w >= 80 {
-		if h := (m.Height - 6 - nr) / 2; h > 0 { ch = h }
+		if h := (availH - 6 - nr) / 2; h > 0 { ch = h }
 	} else {
-		if h := (m.Height - 9 - nr) / 4; h > 0 { ch = h }
+		if h := (availH - 9 - nr) / 4; h > 0 { ch = h }
 	}
 	if ch > 6 { ch = 6 }
 	if ch == 0 {
@@ -499,7 +502,8 @@ func (m Model) buildView() string {
 	// Scrollable viewport: trim to terminal height if content is taller
 	full := out.String()
 	all := strings.Split(strings.TrimSuffix(full, "\n"), "\n")
-	if len(all) <= m.Height || m.Height <= 0 {
+	// Allow 2 rows of overflow before clipping (terminal chrome margin)
+	if len(all) <= m.Height+2 || m.Height <= 0 {
 		return full
 	}
 	// Clamp scroll: preserve user scroll but never go below 0 or beyond content
@@ -508,8 +512,6 @@ func (m Model) buildView() string {
 	maxScroll := len(all) - m.Height
 	if scroll > maxScroll { scroll = maxScroll }
 	if scroll < 0 { scroll = 0 }
-	// Safety: always ensure title line (index 0) is in view on initial renders
-	if m.Width <= 0 { scroll = 0 }
 	end := scroll + m.Height
 	if end > len(all) { end = len(all) }
 	return strings.Join(all[scroll:end], "\n") + "\n"
