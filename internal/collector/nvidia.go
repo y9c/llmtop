@@ -59,7 +59,7 @@ func (n *NVMLCollector) Fetch(ctx context.Context) ([]metrics.GPU, error) {
 
 		power, ret := dev.GetPowerUsage()
 		if ret == nvml.SUCCESS {
-			g.PowerW = float64(power)
+			g.PowerW = float64(power) / 1000.0
 		}
 
 		powerLimit, ret := dev.GetEnforcedPowerLimit()
