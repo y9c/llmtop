@@ -41,9 +41,7 @@ type App struct {
 	startAt  time.Time
 	gpuName  string
 
-	// Last valid instantaneous values (held across ticks that have no new data)
-	lastInstDec  float64
-	lastInstPre  float64
+	// Last valid instantaneous TTFT/TPOT (held across ticks that have no new data)
 	lastInstTTFT float64
 	lastInstTPOT float64
 
@@ -181,20 +179,15 @@ func (a *App) doFetch(ctx context.Context) {
 		a.prevSet = true
 	}
 
-	// Carry last valid instantaneous values (don't reset to 0 on idle ticks)
+	// Cumulative averages only (don't carry forward instantaneous values —
+	// if no new tokens were generated, show 0, consistent with run=0).
 	if delta.DecodeTokS > 0 {
-		a.lastInstDec = delta.DecodeTokS
 		a.decCumSum += delta.DecodeTokS
 		a.decCumCount++
-	} else {
-		delta.DecodeTokS = a.lastInstDec
 	}
 	if delta.PrefillTokS > 0 {
-		a.lastInstPre = delta.PrefillTokS
 		a.preCumSum += delta.PrefillTokS
 		a.preCumCount++
-	} else {
-		delta.PrefillTokS = a.lastInstPre
 	}
 	delta.TTFTMs = a.lastInstTTFT
 	delta.TPOTMs = a.lastInstTPOT
