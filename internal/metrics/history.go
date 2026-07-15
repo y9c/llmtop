@@ -22,9 +22,7 @@ func (h *History) Push(v float64) {
 	h.count++
 }
 
-// ValuesInto writes history values into dst, reusing its backing array.
-// Returns a sub-slice of dst with the data. Caller should not retain the slice across ticks.
-func (h *History) ValuesInto(dst []float64) []float64 {
+func (h *History) ValuesInto([]float64) []float64 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	n := h.count
@@ -32,15 +30,12 @@ func (h *History) ValuesInto(dst []float64) []float64 {
 		n = historyLen
 	}
 	if n == 0 {
-		return dst[:0]
+		return nil
 	}
-	if cap(dst) < n {
-		dst = make([]float64, n)
-	}
-	dst = dst[:n]
+	out := make([]float64, n)
 	start := h.count - n
 	for i := 0; i < n; i++ {
-		dst[i] = h.buf[(start+i)%historyLen]
+		out[i] = h.buf[(start+i)%historyLen]
 	}
-	return dst
+	return out
 }
