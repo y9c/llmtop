@@ -14,12 +14,14 @@ type GPUCollector interface {
 
 // NVMLCollector collects GPU metrics via nvml.
 // nvml is initialized once (lazily) on the first Fetch and cached.
+// gpuID selects a single GPU (0-based); -1 monitors all GPUs.
 type NVMLCollector struct {
 	mu          sync.Mutex
 	initialized bool
+	gpuID       int
 }
 
-func NewNVMLCollector() *NVMLCollector { return &NVMLCollector{} }
+func NewNVMLCollector(gpuID int) *NVMLCollector { return &NVMLCollector{gpuID: gpuID} }
 
 func (n *NVMLCollector) Name() string { return "NVIDIA" }
 

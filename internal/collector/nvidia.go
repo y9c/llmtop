@@ -22,7 +22,14 @@ func (n *NVMLCollector) Fetch(ctx context.Context) ([]metrics.GPU, error) {
 	}
 
 	gpus := make([]metrics.GPU, 0, count)
-	for i := 0; i < count; i++ {
+	start, end := 0, count
+	if n.gpuID >= 0 {
+		if n.gpuID >= count {
+			return nil, fmt.Errorf("nvml: GPU %d not found (have %d)", n.gpuID, count)
+		}
+		start, end = n.gpuID, n.gpuID+1
+	}
+	for i := start; i < end; i++ {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()

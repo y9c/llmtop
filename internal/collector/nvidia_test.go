@@ -10,7 +10,7 @@ func BenchmarkFetchNVML_Cold(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Simulates cold start each tick (old implementation)
-		n := NewNVMLCollector()
+		n := NewNVMLCollector(-1)
 		n.ensureInit(context.Background())
 		_, _ = n.Fetch(context.Background())
 		n.Close()
@@ -18,7 +18,7 @@ func BenchmarkFetchNVML_Cold(b *testing.B) {
 }
 
 func BenchmarkFetchNVML_Warm(b *testing.B) {
-	n := NewNVMLCollector()
+	n := NewNVMLCollector(-1)
 	n.ensureInit(context.Background())
 	defer n.Close()
 	b.ResetTimer()
@@ -28,7 +28,7 @@ func BenchmarkFetchNVML_Warm(b *testing.B) {
 }
 
 func BenchmarkFetchNVML_PerTick(b *testing.B) {
-	n := NewNVMLCollector()
+	n := NewNVMLCollector(-1)
 	n.ensureInit(context.Background())
 	defer n.Close()
 	b.ResetTimer()
