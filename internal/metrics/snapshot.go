@@ -95,9 +95,23 @@ func ComputeDelta(prev, cur Snapshot, dt float64) Deltas {
 	}
 	d.DecodeTokS = (cur.GenTokensTotal - prev.GenTokensTotal) / dt
 	d.PrefillTokS = (cur.PromptTokensTotal - prev.PromptTokensTotal) / dt
+	// Token rates are monotonic; a negative delta means the server's counters
+	// reset (restart/relabel), so surface it as 0 rather than a negative rate.
+	if d.DecodeTokS < 0 {
+		d.DecodeTokS = 0
+	}
+	if d.PrefillTokS < 0 {
+		d.PrefillTokS = 0
+	}
 	// AcceptRate = accepted tokens / draft tokens (0-1)
 	if nd := cur.SpecDraftToksTotal - prev.SpecDraftToksTotal; nd > 0 {
 		d.AcceptRate = (cur.SpecAcceptedTotal - prev.SpecAcceptedTotal) / nd
+	}
+	if d.AcceptRate < 0 {
+		d.AcceptRate = 0
+	}
+	if d.AcceptRate > 1 {
+		d.AcceptRate = 1
 	}
 	return d
 }
