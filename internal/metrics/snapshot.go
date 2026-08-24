@@ -28,9 +28,6 @@ type Snapshot struct {
 	PromptCachedTotal float64
 	PromptLocalTotal  float64
 
-	// Live rolling decode throughput exported by SGLang (tok/s); 0 on other backends
-	GenThroughput float64
-
 	// Speculative Decoding (MTP / Eagle / DFlash)
 	SpecDraftsTotal    float64
 	SpecDraftToksTotal float64

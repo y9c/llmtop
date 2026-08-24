@@ -6,7 +6,6 @@ var sglangSample = `sglang:prompt_tokens_total{model_name="m",is_streaming="fals
 sglang:prompt_tokens_total{model_name="m",is_streaming="true"} 7000
 sglang:generation_tokens_total{model_name="m",is_streaming="false"} 15000
 sglang:generation_tokens_total{model_name="m",is_streaming="true"} 3000
-sglang:gen_throughput{tp_rank="0"} 321.5
 sglang:num_running_reqs{tp_rank="0"} 3
 sglang:num_queue_reqs{tp_rank="0"} 2
 sglang:token_usage{tp_rank="0"} 0.85
@@ -47,9 +46,6 @@ func TestSGLangParse(t *testing.T) {
 	}
 	if s.GenTokensTotal != 18000 {
 		t.Fatalf("GenTokensTotal: want 18000 (both streaming series summed), got %v", s.GenTokensTotal)
-	}
-	if s.GenThroughput != 321.5 {
-		t.Fatalf("GenThroughput: want 321.5, got %v", s.GenThroughput)
 	}
 	if s.RunningReqs != 3 {
 		t.Fatalf("RunningReqs: want 3, got %v", s.RunningReqs)

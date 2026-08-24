@@ -51,10 +51,6 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 			func(s *metrics.Snapshot, v float64) { s.PromptTokensTotal = sumGauge(`prompt_tokens_total`, body) }},
 		{"sglang:generation_tokens_total", gaugeRe(`generation_tokens_total`),
 			func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = sumGauge(`generation_tokens_total`, body) }},
-		// live rolling decode tok/s computed server-side; app.go prefers this
-		// over counter deltas because token counters only advance in bursts
-		{"sglang:gen_throughput", gaugeRe(`gen_throughput`),
-			func(s *metrics.Snapshot, v float64) { s.GenThroughput = v }},
 		// SGLang >= 0.5 renamed the request gauges (was num_running_requests / num_waiting_requests)
 		{"sglang:num_running_reqs", gaugeRe(`num_running_reqs`),
 			func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
