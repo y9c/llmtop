@@ -165,6 +165,11 @@ func (a *App) doFetch(ctx context.Context) {
 	var delta metrics.Deltas
 	if a.prevSet {
 		delta = metrics.ComputeDelta(a.prevSnap, snap, a.cfg.Rate.Seconds())
+		// SGLang exposes a server-side rolling decode rate; prefer it over
+		// counter deltas, which only move when requests complete.
+		if snap.GenThroughput > 0 {
+			delta.DecodeTokS = snap.GenThroughput
+		}
 
 		// Track per-sample TTFT/TPOT from histogram deltas
 		if ttftN := snap.TTFTCount - a.prevSnap.TTFTCount; ttftN > 0 {

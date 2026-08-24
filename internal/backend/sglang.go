@@ -20,6 +20,20 @@ func gaugeRe(name string) *regexp.Regexp {
 	return regexp.MustCompile(`sglang:` + name + `(?:\{[^}]*\})?\s+([\d.eE+-]+)`)
 }
 
+// sumGauge totals every sample of a metric. SGLang exports token counters as
+// multiple labeled series (e.g. is_streaming="true"/"false"); the streaming
+// series is the only one that advances during generation, so both must count.
+func sumGauge(name string, body string) float64 {
+	re := gaugeRe(name)
+	total := 0.0
+	for _, m := range re.FindAllStringSubmatch(body, -1) {
+		if v, err := strconv.ParseFloat(m[1], 64); err == nil {
+			total += v
+		}
+	}
+	return total
+}
+
 func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 	s := metrics.Snapshot{Timestamp: time.Now()}
 
@@ -34,9 +48,13 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		set func(*metrics.Snapshot, float64)
 	}{
 		{"sglang:prompt_tokens_total", gaugeRe(`prompt_tokens_total`),
-			func(s *metrics.Snapshot, v float64) { s.PromptTokensTotal = v }},
+			func(s *metrics.Snapshot, v float64) { s.PromptTokensTotal = sumGauge(`prompt_tokens_total`, body) }},
 		{"sglang:generation_tokens_total", gaugeRe(`generation_tokens_total`),
-			func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = v }},
+			func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = sumGauge(`generation_tokens_total`, body) }},
+		// live rolling decode tok/s computed server-side; app.go prefers this
+		// over counter deltas because token counters only advance in bursts
+		{"sglang:gen_throughput", gaugeRe(`gen_throughput`),
+			func(s *metrics.Snapshot, v float64) { s.GenThroughput = v }},
 		// SGLang >= 0.5 renamed the request gauges (was num_running_requests / num_waiting_requests)
 		{"sglang:num_running_reqs", gaugeRe(`num_running_reqs`),
 			func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
