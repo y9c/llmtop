@@ -21,7 +21,6 @@ var (
 	styleKVChart   = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc"))
 	styleDecChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00d4ff"))
 	stylePreChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#38bdf8"))
-	styleMemChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00"))
 
 	styleEmpty    = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
 	styleLowVal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555")).Bold(true)
@@ -440,30 +439,28 @@ func (m Model) buildView() string {
 	}
 	p(twoColBot(lW2, rW2))
 
-	// Charts box: 5 mini timelines (Util, KV, Dec, Pre, Mem)
+	// Charts box: 4 mini timelines (Util, KV, Pre, Dec)
 	// Total lines: title(1) + table(2+nr) + hline(1) + charts + footer(1)
 	// Wide charts: row1 chart(ch) + gap(1) + row2 chart(ch) → total = 6 + nr + 2*ch
-	// Narrow charts: 5×chart(ch) + 4×gap → total = 9 + nr + 5*ch
+	// Narrow charts: 4×chart(ch) + 3×gap → total = 8 + nr + 4*ch
 	ch := 0
 	if w >= 80 {
 		if h := (m.Height - 6 - nr) / 2; h > 0 { ch = h }
 	} else {
-		if h := (m.Height - 9 - nr) / 5; h > 0 { ch = h }
+		if h := (m.Height - 8 - nr) / 4; h > 0 { ch = h }
 	}
 	if ch == 0 {
 		p(footerLine(w))
 	} else if w >= 80 {
-		// Row 1: Util | KV (2 wide), Row 2: Dec | Pre | Mem (3 wide)
-		half  := (innerW - 2) / 2
-		third := (innerW - 4) / 3
+		// 2×2 grid: Util | KV / Pre | Dec
+		half := (innerW - 2) / 2 // gap=2 between columns
 		defs1 := []chartDef{
 			{"Util", m.UtilHist, half, ch, styleUtilChart},
 			{"KV", m.KVHist, half, ch, styleKVChart},
 		}
 		defs2 := []chartDef{
-			{"Dec", m.DecHist, third, ch, styleDecChart},
-			{"Pre", m.PreHist, third, ch, stylePreChart},
-			{"Mem", m.MemHist, third, ch, styleMemChart},
+			{"Pre", m.PreHist, half, ch, stylePreChart},
+			{"Dec", m.DecHist, half, ch, styleDecChart},
 		}
 		var names []string
 		for _, d := range defs1 {
@@ -481,9 +478,8 @@ func (m Model) buildView() string {
 		defs := []chartDef{
 			{"Util", m.UtilHist, innerW, ch, styleUtilChart},
 			{"KV", m.KVHist, innerW, ch, styleKVChart},
-			{"Dec", m.DecHist, innerW, ch, styleDecChart},
 			{"Pre", m.PreHist, innerW, ch, stylePreChart},
-			{"Mem", m.MemHist, innerW, ch, styleMemChart},
+			{"Dec", m.DecHist, innerW, ch, styleDecChart},
 		}
 		var names []string
 		for _, d := range defs {
