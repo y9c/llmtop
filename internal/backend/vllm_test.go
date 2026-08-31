@@ -42,6 +42,20 @@ func TestVLLMDetect(t *testing.T) {
 	}
 }
 
+func TestVLLMParseWaitingByReason(t *testing.T) {
+	body := `vllm:num_requests_waiting_by_reason{engine="0",model_name="m",reason="capacity"} 2
+vllm:num_requests_waiting_by_reason{engine="0",model_name="m",reason="queue"} 1
+`
+	var b VLLM
+	s, err := b.Parse(body)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	if s.WaitingReqs != 3 {
+		t.Fatalf("WaitingReqs: want 3 (sum over reasons), got %v", s.WaitingReqs)
+	}
+}
+
 func TestVLLMParse(t *testing.T) {
 	var b VLLM
 	s, err := b.Parse(sampleMetrics)

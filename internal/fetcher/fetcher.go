@@ -64,7 +64,8 @@ func (f *Fetcher) do(ctx context.Context, url string) (string, error) {
 		return "", fmt.Errorf("http get: %w", err)
 	}
 	defer resp.Body.Close()
-	b, err := io.ReadAll(resp.Body)
+	// Bound the body so a misbehaving endpoint can't exhaust memory.
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
 	if err != nil {
 		return "", fmt.Errorf("read body: %w", err)
 	}

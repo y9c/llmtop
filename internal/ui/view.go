@@ -12,20 +12,20 @@ import (
 
 // Pre-created styles — created once at init, not per-frame.
 var (
-	styleTitle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00d4ff"))
-	styleGray     = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
-	styleGrayPipe = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
-	styleTag      = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
-	styleFooter   = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+	styleTitle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00d4ff"))
+	styleGray      = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
+	styleGrayPipe  = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
+	styleTag       = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
+	styleFooter    = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
 	styleUtilChart = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ade80"))
 	styleKVChart   = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc"))
 	styleDecChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00"))
 	stylePreChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#38bdf8"))
 
-	styleEmpty    = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
-	styleLowVal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555")).Bold(true)
-	styleMidVal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Bold(true)
-	styleHighVal  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00dd66"))
+	styleEmpty   = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
+	styleLowVal  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555")).Bold(true)
+	styleMidVal  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Bold(true)
+	styleHighVal = lipgloss.NewStyle().Foreground(lipgloss.Color("#00dd66"))
 
 	stylePctRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff3333")).Bold(true)
 	stylePctOrange = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00")).Bold(true)
@@ -45,11 +45,11 @@ var (
 	styleValTeal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#2dd4bf")).Bold(true)
 	styleValPink   = lipgloss.NewStyle().Foreground(lipgloss.Color("#f472b6")).Bold(true)
 
-	styleTH      = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ade80")).Bold(true)  // Throughput header
-	styleSpec    = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc")).Bold(true)  // Speculative header
+	styleTH   = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ade80")).Bold(true) // Throughput header
+	styleSpec = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc")).Bold(true) // Speculative header
 
 	// Pre-rendered fixed strings — lipgloss.Render() allocates, so render once at init
-	grayPipe    = styleGrayPipe.Render("│")
+	grayPipe     = styleGrayPipe.Render("│")
 	grayCornerTL = styleGray.Render("┌")
 	grayCornerBL = styleGray.Render("└")
 	grayCornerTR = styleGray.Render("┐")
@@ -58,7 +58,6 @@ var (
 	grayTeeB     = styleGray.Render("┴")
 	graySep      = styleGray.Render(" | ")
 	grayPrefix   = styleGray.Render("─ ")
-
 )
 
 // Reusable buffer to avoid time.Now().Format() allocation per tick
@@ -66,24 +65,24 @@ var timeBuf = make([]byte, 0, 8)
 
 // Pre-rendered tag strings — avoids per-frame styleTag.Render() allocation
 var (
-	tagRun   = styleTag.Render("run")
-	tagWait  = styleTag.Render("wait")
-	tagDec   = styleTag.Render("dec")
-	tagPre   = styleTag.Render("pre")
-	tagGen   = styleTag.Render("gen")
-	tagPrm   = styleTag.Render("prm")
-	tagUp    = styleTag.Render("up")
-	tagTTFT  = styleTag.Render("ttft")
-	tagTPOT  = styleTag.Render("tpot")
+	tagRun    = styleTag.Render("run")
+	tagWait   = styleTag.Render("wait")
+	tagDec    = styleTag.Render("dec")
+	tagPre    = styleTag.Render("pre")
+	tagGen    = styleTag.Render("gen")
+	tagPrm    = styleTag.Render("prm")
+	tagUp     = styleTag.Render("up")
+	tagTTFT   = styleTag.Render("ttft")
+	tagTPOT   = styleTag.Render("tpot")
 	tagAccept = styleTag.Render("accept")
-	tagTD    = styleTag.Render("t/d")
-	tagDraft = styleTag.Render("draft")
-	tagRej   = styleTag.Render("rej")
-	tagHit   = styleTag.Render("hit")
-	tagQ     = styleTag.Render("q")
-	tagCache = styleTag.Render("cache")
-	tagCmp   = styleTag.Render("cmp")
-	tagAcc   = styleTag.Render("acc")
+	tagTD     = styleTag.Render("t/d")
+	tagDraft  = styleTag.Render("draft")
+	tagRej    = styleTag.Render("rej")
+	tagHit    = styleTag.Render("hit")
+	tagQ      = styleTag.Render("q")
+	tagCache  = styleTag.Render("cache")
+	tagCmp    = styleTag.Render("cmp")
+	tagAcc    = styleTag.Render("acc")
 )
 
 func fmtNum(v float64) string {
@@ -161,7 +160,6 @@ var cvBuf = make([]byte, 0, 16)
 
 // Reusable buffers for string building in buildView
 var titleBuf = make([]byte, 0, 128)
-var footBuf = make([]byte, 0, 128)
 
 type chartDef struct {
 	name   string
@@ -191,7 +189,9 @@ func chartLines(def chartDef) []string {
 	}
 	// Reserve 10 chars for y-axis labels (e.g. "  100.00 ┤")
 	plotW := def.width - 10
-	if plotW < 10 { plotW = 10 }
+	if plotW < 10 {
+		plotW = 10
+	}
 	g := asciigraph.Plot(def.vals, asciigraph.Height(h), asciigraph.Width(plotW))
 
 	var out []string
@@ -274,17 +274,23 @@ func (m Model) buildView() string {
 	s := m.Snap
 	d := m.Delta
 	w := m.Width
-	if w <= 0 { w = 80 }
+	if w <= 0 {
+		w = 80
+	}
 
 	chr := 0.0
-	if s.PrefixCacheQueries > 0 { chr = s.PrefixCacheHits / s.PrefixCacheQueries * 100 }
+	if s.PrefixCacheQueries > 0 {
+		chr = s.PrefixCacheHits / s.PrefixCacheQueries * 100
+	}
 	draftAcceptPct := d.AcceptRate * 100
 	if draftAcceptPct == 0 && s.SpecDraftToksTotal > 0 {
 		draftAcceptPct = s.SpecAcceptedTotal / s.SpecDraftToksTotal * 100
 	}
 	rej := s.SpecDraftToksTotal - s.SpecAcceptedTotal
 	accPerDraftBatch := 0.0
-	if s.SpecDraftsTotal > 0 { accPerDraftBatch = s.SpecAcceptedTotal / s.SpecDraftsTotal }
+	if s.SpecDraftsTotal > 0 {
+		accPerDraftBatch = s.SpecAcceptedTotal / s.SpecDraftsTotal
+	}
 
 	uptime := formatDuration(m.Uptime)
 	innerW := w - 4
@@ -302,12 +308,14 @@ func (m Model) buildView() string {
 	tb = append(tb, now...)
 	tb = append(tb, " llmtop ┃ "...)
 	tb = append(tb, m.Backend...)
-	tb = append(tb, " ┃ "...)
-	if cnt := s.GPUCount(); cnt > 1 {
-		tb = strconv.AppendInt(tb, int64(cnt), 10)
-		tb = append(tb, []byte("×")...)
+	if s.GPUName != "" {
+		tb = append(tb, " ┃ "...)
+		if cnt := s.GPUCount(); cnt > 1 {
+			tb = strconv.AppendInt(tb, int64(cnt), 10)
+			tb = append(tb, []byte("×")...)
+		}
+		tb = append(tb, s.GPUName...)
 	}
-	tb = append(tb, s.GPUName...)
 	if s.GPUTempC > 0 {
 		tb = append(tb, " ┃ "...)
 		tb = strconv.AppendFloat(tb, s.GPUTempC, 'f', 0, 64)
@@ -350,7 +358,7 @@ func (m Model) buildView() string {
 	}
 	preInst := styleValCyan.Render(fmt.Sprintf("%.0f", d.PrefillTokS))
 	preAvg := styleParen.Render("(") + styleAvgCyan.Render(preAvgStr) + styleParen.Render(")")
-	decInst := styleValCyan.Render(fmt.Sprintf("%.0f", d.DecodeTokS))
+	decInst := styleDecChart.Render(fmt.Sprintf("%.0f", d.DecodeTokS))
 	decAvg := styleParen.Render("(") + styleAvgCyan.Render(decAvgStr) + styleParen.Render(")")
 	tpRows = append(tpRows, tagPre+" "+preInst+preAvg+"  "+tagDec+" "+decInst+decAvg)
 
@@ -429,12 +437,20 @@ func (m Model) buildView() string {
 	}
 
 	nr := len(tpRows)
-	if len(spRows) > nr { nr = len(spRows) }
+	if len(spRows) > nr {
+		nr = len(spRows)
+	}
 
 	p(twoColTop("Throughput", "Speculative", lW2, rW2))
 	for i := 0; i < nr; i++ {
-		lt := ""; if i < len(tpRows) { lt = tpRows[i] }
-		rt := ""; if i < len(spRows) { rt = spRows[i] }
+		lt := ""
+		if i < len(tpRows) {
+			lt = tpRows[i]
+		}
+		rt := ""
+		if i < len(spRows) {
+			rt = spRows[i]
+		}
 		p(twoColLine(lt, rt, lW2, rW2))
 	}
 	p(twoColBot(lW2, rW2))
@@ -445,9 +461,13 @@ func (m Model) buildView() string {
 	// Narrow charts: 4×chart(ch) + 3×gap → total = 8 + nr + 4*ch
 	ch := 0
 	if w >= 80 {
-		if h := (m.Height - 6 - nr) / 2; h > 0 { ch = h }
+		if h := (m.Height - 6 - nr) / 2; h > 0 {
+			ch = h
+		}
 	} else {
-		if h := (m.Height - 8 - nr) / 4; h > 0 { ch = h }
+		if h := (m.Height - 8 - nr) / 4; h > 0 {
+			ch = h
+		}
 	}
 	if ch == 0 {
 		p(footerLine(w))
@@ -501,7 +521,9 @@ func (m Model) buildView() string {
 func iline(content string, innerW int) string {
 	vis := lipgloss.Width(content)
 	pad := innerW - vis
-	if pad < 0 { pad = 0 }
+	if pad < 0 {
+		pad = 0
+	}
 	return grayPipe + " " + content + spaceStr(pad) + " " + grayPipe
 }
 
@@ -578,8 +600,12 @@ func twoColTop(lTitle, rTitle string, lW, rW int) string {
 	rStyled := styleGray.Render("─ ") + styleSpec.Render(rTitle) + " "
 	lp := lW + 2 - lipgloss.Width(lStyled)
 	rp := rW + 2 - lipgloss.Width(rStyled)
-	if lp < 0 { lp = 0 }
-	if rp < 0 { rp = 0 }
+	if lp < 0 {
+		lp = 0
+	}
+	if rp < 0 {
+		rp = 0
+	}
 	return grayCornerTL + lStyled + styleGray.Render(strings.Repeat("─", lp)) + grayTeeT + rStyled + styleGray.Render(strings.Repeat("─", rp)) + grayCornerTR
 }
 
@@ -589,15 +615,21 @@ func twoColBot(lW, rW int) string {
 
 func truncateWidth(s string, w int) string {
 	vis := lipgloss.Width(s)
-	if vis <= w { return s + strings.Repeat(" ", w-vis) }
+	if vis <= w {
+		return s + strings.Repeat(" ", w-vis)
+	}
 	var out strings.Builder
 	plain := 0
 	inANSI := false
 	for _, r := range s {
-		if r == '\x1b' { inANSI = true }
+		if r == '\x1b' {
+			inANSI = true
+		}
 		if inANSI {
 			out.WriteRune(r)
-			if r == 'm' { inANSI = false }
+			if r == 'm' {
+				inANSI = false
+			}
 			continue
 		}
 		if plain >= w {
@@ -636,5 +668,3 @@ func formatDuration(d time.Duration) string {
 }
 
 var durBuf = make([]byte, 0, 16)
-
-

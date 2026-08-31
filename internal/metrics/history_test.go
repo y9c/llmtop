@@ -9,8 +9,7 @@ func TestHistoryPushLen(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		h.Push(float64(i))
 	}
-	var buf []float64
-	vals := h.ValuesInto(buf)
+	vals := h.ValuesInto()
 	if got := len(vals); got != 10 {
 		t.Fatalf("len after 10 pushes: want 10, got %d", got)
 	}
@@ -21,8 +20,7 @@ func TestHistoryRingOverwrite(t *testing.T) {
 	for i := 0; i < 66; i++ {
 		h.Push(float64(i))
 	}
-	var buf []float64
-	vals := h.ValuesInto(buf)
+	vals := h.ValuesInto()
 	if got := len(vals); got != historyLen {
 		t.Fatalf("len after 70 pushes: want %d, got %d", historyLen, got)
 	}
@@ -54,8 +52,7 @@ func TestHistoryChronologicalOrder(t *testing.T) {
 	for i := 1; i <= 66; i++ {
 		h.Push(float64(i))
 	}
-	var buf []float64
-	vals := h.ValuesInto(buf)
+	vals := h.ValuesInto()
 	if len(vals) != historyLen {
 		t.Fatalf("want len %d, got %d", historyLen, len(vals))
 	}

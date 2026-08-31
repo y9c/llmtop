@@ -26,22 +26,15 @@ type App struct {
 	program *tea.Program
 	model   *ui.Model
 
-	memHist *metrics.History
-	kvHist  *metrics.History
+	memHist  *metrics.History
+	kvHist   *metrics.History
 	utilHist *metrics.History
-	decHist *metrics.History
-	preHist *metrics.History
+	decHist  *metrics.History
+	preHist  *metrics.History
 
 	// Rolling-rate windows used to smooth bursty prefill/decode rates
 	decRateHist *metrics.History
 	preRateHist *metrics.History
-
-	// Reusable buffers to avoid heap alloc per tick
-	decBuf  []float64
-	memBuf  []float64
-	utilBuf []float64
-	kvBuf   []float64
-	preBuf  []float64
 
 	prevSnap metrics.Snapshot
 	prevSet  bool
@@ -62,18 +55,18 @@ type App struct {
 
 func New(cfg *config.Config, f *fetcher.Fetcher, gpu collector.GPUCollector, m *ui.Model) *App {
 	return &App{
-		cfg:     cfg,
-		fetcher: f,
-		gpu:     gpu,
-		model:    m,
-		memHist:  metrics.NewHistory(),
-		kvHist:   metrics.NewHistory(),
-		utilHist: metrics.NewHistory(),
-		decHist:  metrics.NewHistory(),
-		preHist:  metrics.NewHistory(),
+		cfg:         cfg,
+		fetcher:     f,
+		gpu:         gpu,
+		model:       m,
+		memHist:     metrics.NewHistory(),
+		kvHist:      metrics.NewHistory(),
+		utilHist:    metrics.NewHistory(),
+		decHist:     metrics.NewHistory(),
+		preHist:     metrics.NewHistory(),
 		decRateHist: metrics.NewHistory(),
 		preRateHist: metrics.NewHistory(),
-		startAt:  time.Now(),
+		startAt:     time.Now(),
 	}
 }
 
@@ -90,8 +83,6 @@ func (a *App) Run(ctx context.Context) error {
 	_, err := a.program.Run()
 	return err
 }
-
-
 
 func (a *App) tick(ctx context.Context) {
 	ticker := time.NewTicker(a.cfg.Rate)
@@ -240,15 +231,15 @@ func (a *App) doFetch(ctx context.Context) {
 	}
 
 	a.program.Send(ui.TickMsg{
-		Backend: a.backend.Name(),
-		GPUName: a.gpuName,
-		Snap:    snap,
-		Delta:   delta,
-		Uptime:  uptime,
-		DecHist: a.decHist.ValuesInto(a.decBuf),
-		PreHist: a.preHist.ValuesInto(a.preBuf),
-		MemHist: a.memHist.ValuesInto(a.memBuf),
-		UtilHist: a.utilHist.ValuesInto(a.utilBuf),
-		KVHist:   a.kvHist.ValuesInto(a.kvBuf),
+		Backend:  a.backend.Name(),
+		GPUName:  a.gpuName,
+		Snap:     snap,
+		Delta:    delta,
+		Uptime:   uptime,
+		DecHist:  a.decHist.ValuesInto(),
+		PreHist:  a.preHist.ValuesInto(),
+		MemHist:  a.memHist.ValuesInto(),
+		UtilHist: a.utilHist.ValuesInto(),
+		KVHist:   a.kvHist.ValuesInto(),
 	})
 }

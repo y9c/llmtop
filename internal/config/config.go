@@ -9,13 +9,12 @@ import (
 )
 
 type Config struct {
-	Host     string
-	Port     int
-	Backend  string // auto | vllm | sglang | ollama | llmcpp
-	Rate     time.Duration
-	GPUID    int
+	Host    string
+	Port    int
+	Backend string // auto | vllm | sglang | ollama | llmcpp
+	Rate    time.Duration
+	GPUID   int
 	URL     string
-	Scheme  string
 	Version string
 }
 

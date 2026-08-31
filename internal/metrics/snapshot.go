@@ -39,20 +39,10 @@ type Snapshot struct {
 	PrefixCacheQueries float64
 
 	// Latency histograms (from vLLM _sum / _count)
-	TTFTTotalS   float64 // vllm:time_to_first_token_seconds_sum
-	TTFTCount    float64 // vllm:time_to_first_token_seconds_count
-	TPOTTotalS   float64 // vllm:request_time_per_output_token_seconds_sum
-	TPOTCount    float64 // vllm:request_time_per_output_token_seconds_count
-
-	// Session-wide latency tracking
-	TTFTMinS   float64
-	TTFTMaxS   float64
-	TTFTAvgS   float64
-	TPOTMinS   float64
-	TPOTMaxS   float64
-	TPOTAvgS   float64
-	TTFTSamples float64
-	TPOTSamples float64
+	TTFTTotalS float64 // vllm:time_to_first_token_seconds_sum
+	TTFTCount  float64 // vllm:time_to_first_token_seconds_count
+	TPOTTotalS float64 // vllm:request_time_per_output_token_seconds_sum
+	TPOTCount  float64 // vllm:request_time_per_output_token_seconds_count
 
 	// Server start time (from process_start_time_seconds)
 	StartTimeUnix float64
@@ -73,12 +63,12 @@ func (s Snapshot) GPUCount() int { return len(s.GPUs) }
 
 // GPU is a single GPU info row from nvidia-smi.
 type GPU struct {
-	Name     string
-	UsedMB   float64
-	TotalMB  float64
-	UtilPct  float64
-	TempC    float64
-	PowerW   float64
+	Name      string
+	UsedMB    float64
+	TotalMB   float64
+	UtilPct   float64
+	TempC     float64
+	PowerW    float64
 	PowerMaxW float64
 }
 

@@ -67,6 +67,18 @@ func (VLLM) Parse(body string) (metrics.Snapshot, error) {
 		}
 	}
 
+	// vLLM also exports num_requests_waiting_by_reason (one labeled series per
+	// reason). If plain num_requests_waiting wasn't present, total the reasons
+	// so queued requests still show up.
+	if s.WaitingReqs == 0 && strings.Contains(body, "num_requests_waiting_by_reason") {
+		re := regexp.MustCompile(`(?:vllm:)?num_requests_waiting_by_reason\{[^}]*\}\s+([\d.eE+-]+)`)
+		for _, m := range re.FindAllStringSubmatch(body, -1) {
+			if v, err := strconv.ParseFloat(m[1], 64); err == nil {
+				s.WaitingReqs += v
+			}
+		}
+	}
+
 	// Speculative accept positions need special handling (dynamic key per position).
 	if strings.Contains(body, "spec_decode_num_accepted_tokens_per_pos_total") {
 		for _, m := range reAcceptPos.FindAllStringSubmatch(body, -1) {

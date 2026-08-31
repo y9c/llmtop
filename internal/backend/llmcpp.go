@@ -29,7 +29,6 @@ func (LLamaCPP) Parse(body string) (metrics.Snapshot, error) {
 		{"tokens_predicted_total", regexp.MustCompile(`(?:llamacpp:)?tokens_predicted_total\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = v }},
 		{"requests_processing", regexp.MustCompile(`(?:llamacpp:)?requests_processing\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
 		{"requests_deferred", regexp.MustCompile(`(?:llamacpp:)?requests_deferred\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.WaitingReqs = v }},
-		{"n_decode_total", regexp.MustCompile(`(?:llamacpp:)?n_decode_total\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) {}},
 	}
 
 	for _, rule := range rules {

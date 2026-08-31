@@ -33,7 +33,6 @@ type Model struct {
 	KVHist   []float64
 	Width    int
 	Height   int
-	Scroll   int // viewport scroll offset (lines from top)
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -45,7 +44,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
-		m.Scroll = 0
 	case TickMsg:
 		m.Backend = msg.Backend
 		m.GPUName = msg.GPUName
@@ -61,19 +59,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "up", "k":
-			if m.Scroll > 0 {
-				m.Scroll--
-			}
-		case "down", "j":
-			m.Scroll++
 		}
 	}
 	return m, nil
 }
 
 func (m Model) View() string {
-	if m.Backend == "" || m.GPUName == "" {
+	if m.Backend == "" {
 		return "connecting..."
 	}
 	return m.buildView()

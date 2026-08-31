@@ -22,7 +22,8 @@ func (h *History) Push(v float64) {
 	h.count++
 }
 
-func (h *History) ValuesInto([]float64) []float64 {
+// ValuesInto returns the stored samples in chronological order, oldest first.
+func (h *History) ValuesInto() []float64 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	n := h.count
