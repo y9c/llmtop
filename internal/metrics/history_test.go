@@ -28,6 +28,26 @@ func TestHistoryRingOverwrite(t *testing.T) {
 	}
 }
 
+func TestHistoryRecentAvg(t *testing.T) {
+	h := NewHistory()
+	for i := 1; i <= 5; i++ {
+		h.Push(float64(i)) // 1,2,3,4,5
+	}
+	if got := h.RecentAvg(3); got != 4 {
+		t.Fatalf("RecentAvg(3): want 4, got %v", got)
+	}
+	if got := h.RecentAvg(10); got != 3 { // more than stored -> averages all 5
+		t.Fatalf("RecentAvg(10): want 3, got %v", got)
+	}
+}
+
+func TestHistoryRecentAvgZeroSamples(t *testing.T) {
+	h := NewHistory()
+	if got := h.RecentAvg(5); got != 0 {
+		t.Fatalf("RecentAvg on empty: want 0, got %v", got)
+	}
+}
+
 func TestHistoryChronologicalOrder(t *testing.T) {
 	// Push 70 values (historyLen=60), so buffer wraps
 	h := NewHistory()

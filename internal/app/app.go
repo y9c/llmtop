@@ -15,6 +15,10 @@ import (
 	"github.com/y9c/llmtop/internal/ui"
 )
 
+// rateAvgWindow is the rolling window over which bursty prefill/decode
+// rates are smoothed for display.
+const rateAvgWindow = 5 * time.Second
+
 type App struct {
 	cfg     *config.Config
 	fetcher *fetcher.Fetcher
@@ -27,6 +31,10 @@ type App struct {
 	utilHist *metrics.History
 	decHist *metrics.History
 	preHist *metrics.History
+
+	// Rolling-rate windows used to smooth bursty prefill/decode rates
+	decRateHist *metrics.History
+	preRateHist *metrics.History
 
 	// Reusable buffers to avoid heap alloc per tick
 	decBuf  []float64
@@ -63,6 +71,8 @@ func New(cfg *config.Config, f *fetcher.Fetcher, gpu collector.GPUCollector, m *
 		utilHist: metrics.NewHistory(),
 		decHist:  metrics.NewHistory(),
 		preHist:  metrics.NewHistory(),
+		decRateHist: metrics.NewHistory(),
+		preRateHist: metrics.NewHistory(),
 		startAt:  time.Now(),
 	}
 }
@@ -179,8 +189,7 @@ func (a *App) doFetch(ctx context.Context) {
 		a.prevSet = true
 	}
 
-	// Cumulative averages only (don't carry forward instantaneous values —
-	// if no new tokens were generated, show 0, consistent with run=0).
+	// Cumulative averages use the raw instantaneous samples.
 	if delta.DecodeTokS > 0 {
 		a.decCumSum += delta.DecodeTokS
 		a.decCumCount++
@@ -189,6 +198,18 @@ func (a *App) doFetch(ctx context.Context) {
 		a.preCumSum += delta.PrefillTokS
 		a.preCumCount++
 	}
+
+	// Smooth bursty rates over a rolling window so prefill/decode bursts
+	// don't snap to 0 between requests.
+	window := int(rateAvgWindow / a.cfg.Rate)
+	if window < 1 {
+		window = 1
+	}
+	a.decRateHist.Push(delta.DecodeTokS)
+	a.preRateHist.Push(delta.PrefillTokS)
+	delta.DecodeTokS = a.decRateHist.RecentAvg(window)
+	delta.PrefillTokS = a.preRateHist.RecentAvg(window)
+
 	delta.TTFTMs = a.lastInstTTFT
 	delta.TPOTMs = a.lastInstTPOT
 

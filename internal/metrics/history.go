@@ -39,3 +39,23 @@ func (h *History) ValuesInto([]float64) []float64 {
 	}
 	return out
 }
+
+// RecentAvg returns the mean of the most recent n samples (fewer if not enough yet).
+func (h *History) RecentAvg(n int) float64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.count == 0 {
+		return 0
+	}
+	if n > historyLen {
+		n = historyLen
+	}
+	if n > h.count {
+		n = h.count
+	}
+	sum := 0.0
+	for i := 0; i < n; i++ {
+		sum += h.buf[(h.count-1-i)%historyLen]
+	}
+	return sum / float64(n)
+}
