@@ -19,7 +19,7 @@ var (
 	styleFooter   = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
 	styleUtilChart = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ade80"))
 	styleKVChart   = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc"))
-	styleDecChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#00d4ff"))
+	styleDecChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffaa00"))
 	stylePreChart  = lipgloss.NewStyle().Foreground(lipgloss.Color("#38bdf8"))
 
 	styleEmpty    = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
