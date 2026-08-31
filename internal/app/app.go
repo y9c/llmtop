@@ -137,46 +137,59 @@ func (a *App) doFetch(ctx context.Context) {
 
 	if gpuErr == nil {
 		snap.GPUs = gpuList
-		var avg metrics.GPU
-		for _, g := range gpuList {
-			avg.UsedMB += g.UsedMB
-			avg.TotalMB += g.TotalMB
-			avg.UtilPct += g.UtilPct
-			avg.TempC += g.TempC
-			avg.PowerW += g.PowerW
-			avg.PowerMaxW += g.PowerMaxW
+		if len(gpuList) > 0 {
+			var avg metrics.GPU
+			for _, g := range gpuList {
+				avg.UsedMB += g.UsedMB
+				avg.TotalMB += g.TotalMB
+				avg.UtilPct += g.UtilPct
+				avg.TempC += g.TempC
+				avg.PowerW += g.PowerW
+				avg.PowerMaxW += g.PowerMaxW
+			}
+			n := float64(len(gpuList))
+			avg.Name = gpuList[0].Name
+			avg.UsedMB /= n
+			avg.TotalMB /= n
+			avg.UtilPct /= n
+			avg.TempC /= n
+			avg.PowerW /= n
+			avg.PowerMaxW /= n
+			snap.GPUUsedMB = avg.UsedMB
+			snap.GPUMemTotalMB = avg.TotalMB
+			snap.GPUUtilPct = avg.UtilPct
+			snap.GPUTempC = avg.TempC
+			snap.GPUPowerW = avg.PowerW
+			snap.GPUPowerMaxW = avg.PowerMaxW
+			snap.GPUName = avg.Name
 		}
-		n := float64(len(gpuList))
-		avg.Name = gpuList[0].Name
-		avg.UsedMB /= n
-		avg.TotalMB /= n
-		avg.UtilPct /= n
-		avg.TempC /= n
-		avg.PowerW /= n
-		avg.PowerMaxW /= n
-		snap.GPUUsedMB = avg.UsedMB
-		snap.GPUMemTotalMB = avg.TotalMB
-		snap.GPUUtilPct = avg.UtilPct
-		snap.GPUTempC = avg.TempC
-		snap.GPUPowerW = avg.PowerW
-		snap.GPUPowerMaxW = avg.PowerMaxW
-		snap.GPUName = avg.Name
 	}
 
 	var delta metrics.Deltas
 	if a.prevSet {
-		delta = metrics.ComputeDelta(a.prevSnap, snap, a.cfg.Rate.Seconds())
+		// Use the actual wall time between samples so rates stay correct when
+		// a scrape stalls or two ticks land back-to-back.
+		dt := snap.Timestamp.Sub(a.prevSnap.Timestamp).Seconds()
+		delta = metrics.ComputeDelta(a.prevSnap, snap, dt)
 
-		// Track per-sample TTFT/TPOT from histogram deltas
-		if ttftN := snap.TTFTCount - a.prevSnap.TTFTCount; ttftN > 0 {
-			a.lastInstTTFT = (snap.TTFTTotalS - a.prevSnap.TTFTTotalS) / ttftN * 1000
-		}
-		if tpotN := snap.TPOTCount - a.prevSnap.TPOTCount; tpotN > 0 {
-			a.lastInstTPOT = (snap.TPOTTotalS - a.prevSnap.TPOTTotalS) / tpotN * 1000
+		if !snap.IsEmpty() {
+			// Track per-sample TTFT/TPOT from histogram deltas
+			if ttftN := snap.TTFTCount - a.prevSnap.TTFTCount; ttftN > 0 {
+				a.lastInstTTFT = (snap.TTFTTotalS - a.prevSnap.TTFTTotalS) / ttftN * 1000
+			} else if ttftN < 0 {
+				a.lastInstTTFT = 0 // server histograms reset
+			}
+			if tpotN := snap.TPOTCount - a.prevSnap.TPOTCount; tpotN > 0 {
+				a.lastInstTPOT = (snap.TPOTTotalS - a.prevSnap.TPOTTotalS) / tpotN * 1000
+			} else if tpotN < 0 {
+				a.lastInstTPOT = 0
+			}
 		}
 	}
-	a.prevSnap = snap
+	// Only advance the delta baseline with real data; a failed scrape must not
+	// be treated as "counters went to zero" (that would inflate the next sample).
 	if !snap.IsEmpty() {
+		a.prevSnap = snap
 		a.prevSet = true
 	}
 

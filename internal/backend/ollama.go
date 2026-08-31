@@ -17,8 +17,8 @@ func (Ollama) Detect(body string) bool {
 }
 
 type ollamaModel struct {
-	Name      string  `json:"name"`
-	SizeVRAM  float64 `json:"size_vram"`
+	Name     string  `json:"name"`
+	SizeVRAM float64 `json:"size_vram"`
 }
 
 type ollamaPSResponse struct {
@@ -41,7 +41,6 @@ func (Ollama) Parse(body string) (metrics.Snapshot, error) {
 
 	if totalVRAM > 0 {
 		s.GPUUsedMB = totalVRAM / 1024 / 1024
-		s.GPUMemTotalMB = s.GPUUsedMB * 2
 	}
 
 	return s, nil

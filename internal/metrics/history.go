@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// Ring buffer for 60 seconds of metric history.
+// Ring buffer holding up to 60 samples of metric history.
 const historyLen = 60
 
 type History struct {

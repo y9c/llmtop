@@ -590,10 +590,6 @@ func footerLine(w int) string {
 	return grayCornerBL + grayDash(w-2) + grayCornerBR
 }
 
-func sepLine(w int) string {
-	return grayDash(w)
-}
-
 func twoColTop(lTitle, rTitle string, lW, rW int) string {
 	// Leading ─ in gray, title in its own color, trailing ─ in gray
 	lStyled := styleGray.Render("─ ") + styleTH.Render(lTitle) + " "
@@ -632,11 +628,13 @@ func truncateWidth(s string, w int) string {
 			}
 			continue
 		}
-		if plain >= w {
+		// Stop before a rune that would push the display width over the limit.
+		rw := lipgloss.Width(string(r))
+		if plain+rw > w {
 			break
 		}
 		out.WriteRune(r)
-		plain++
+		plain += rw
 	}
 	out.WriteString("\x1b[0m")
 	return out.String()

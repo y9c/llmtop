@@ -103,3 +103,47 @@ func TestVLLMParse(t *testing.T) {
 		t.Fatalf("TPOTCount: want 500, got %v", s.TPOTCount)
 	}
 }
+
+func TestVLLMParseSumsMultiEngine(t *testing.T) {
+	body := `vllm:generation_tokens_total{engine="0",model_name="m"} 100
+vllm:generation_tokens_total{engine="1",model_name="m"} 200
+vllm:num_requests_running{engine="0",model_name="m"} 1
+vllm:num_requests_running{engine="1",model_name="m"} 2
+vllm:kv_cache_usage_perc{engine="0",model_name="m"} 0.5
+vllm:kv_cache_usage_perc{engine="1",model_name="m"} 0.5
+`
+	var b VLLM
+	s, err := b.Parse(body)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	if s.GenTokensTotal != 300 {
+		t.Fatalf("GenTokensTotal: want 300 (summed), got %v", s.GenTokensTotal)
+	}
+	if s.RunningReqs != 3 {
+		t.Fatalf("RunningReqs: want 3 (summed), got %v", s.RunningReqs)
+	}
+	if s.KVCacheUsagePct != 0.5 {
+		t.Fatalf("KVCacheUsagePct: want 0.5 (first series, not summed), got %v", s.KVCacheUsagePct)
+	}
+}
+
+func TestVLLMParseAcceptPos10(t *testing.T) {
+	body := `vllm:spec_decode_num_accepted_tokens_per_pos_total{model_name="m",position="10"} 42
+vllm:spec_decode_num_accepted_tokens_per_pos_total{model_name="m",position="1"} 7
+`
+	var b VLLM
+	s, err := b.Parse(body)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	if len(s.SpecAcceptedPos) != 11 {
+		t.Fatalf("SpecAcceptedPos len: want 11, got %d", len(s.SpecAcceptedPos))
+	}
+	if s.SpecAcceptedPos[1] != 7 {
+		t.Fatalf("SpecAcceptedPos[1]: want 7, got %v", s.SpecAcceptedPos[1])
+	}
+	if s.SpecAcceptedPos[10] != 42 {
+		t.Fatalf("SpecAcceptedPos[10]: want 42, got %v", s.SpecAcceptedPos[10])
+	}
+}

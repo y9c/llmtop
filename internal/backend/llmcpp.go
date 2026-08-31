@@ -25,10 +25,10 @@ func (LLamaCPP) Parse(body string) (metrics.Snapshot, error) {
 		re  *regexp.Regexp
 		set func(*metrics.Snapshot, float64)
 	}{
-		{"prompt_tokens_total", regexp.MustCompile(`(?:llamacpp:)?prompt_tokens_total\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.PromptTokensTotal = v }},
-		{"tokens_predicted_total", regexp.MustCompile(`(?:llamacpp:)?tokens_predicted_total\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = v }},
-		{"requests_processing", regexp.MustCompile(`(?:llamacpp:)?requests_processing\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
-		{"requests_deferred", regexp.MustCompile(`(?:llamacpp:)?requests_deferred\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.WaitingReqs = v }},
+		{"prompt_tokens_total", regexp.MustCompile(`(?:llamacpp:)?prompt_tokens_total(?:\{[^}]*\})?\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.PromptTokensTotal = v }},
+		{"tokens_predicted_total", regexp.MustCompile(`(?:llamacpp:)?tokens_predicted_total(?:\{[^}]*\})?\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = v }},
+		{"requests_processing", regexp.MustCompile(`(?:llamacpp:)?requests_processing(?:\{[^}]*\})?\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
+		{"requests_deferred", regexp.MustCompile(`(?:llamacpp:)?requests_deferred(?:\{[^}]*\})?\s+([\d.eE+-]+)`), func(s *metrics.Snapshot, v float64) { s.WaitingReqs = v }},
 	}
 
 	for _, rule := range rules {

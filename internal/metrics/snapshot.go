@@ -50,12 +50,12 @@ type Snapshot struct {
 
 // Deltas holds per-second rates computed from two Snapshots.
 type Deltas struct {
-	DecodeTokS  float64 // instantaneous decode tok/s (holds last valid value)
-	PrefillTokS float64 // instantaneous prefill tok/s (holds last valid value)
+	DecodeTokS  float64 // rolling-window decode tok/s (0 when idle)
+	PrefillTokS float64 // rolling-window prefill tok/s (0 when idle)
 	DecCumAvg   float64 // cumulative average decode tok/s (only active ticks)
 	PreCumAvg   float64 // cumulative average prefill tok/s (only active ticks)
-	TTFTMs      float64 // instantaneous TTFT ms from last sample (holds last valid value)
-	TPOTMs      float64 // instantaneous TPOT ms from last sample (holds last valid value)
+	TTFTMs      float64 // last-sample TTFT ms (held across ticks with no new data)
+	TPOTMs      float64 // last-sample TPOT ms (held across ticks with no new data)
 	AcceptRate  float64
 }
 
