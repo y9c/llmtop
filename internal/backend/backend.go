@@ -21,6 +21,18 @@ func Detect(body string) Backend {
 	return &VLLM{}
 }
 
+// KnownDetect returns the first backend whose marker appears in body, and ok=
+// true. Unlike Detect it never falls back to VLLM, so callers (port probing)
+// can tell a genuine metrics response from an arbitrary one.
+func KnownDetect(body string) (Backend, bool) {
+	for _, b := range backends {
+		if b.Detect(body) {
+			return b, true
+		}
+	}
+	return nil, false
+}
+
 var backendByName = map[string]Backend{
 	"vllm":    &VLLM{},
 	"llamacpp": &LLamaCPP{},

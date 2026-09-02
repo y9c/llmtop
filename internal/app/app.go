@@ -36,11 +36,12 @@ type App struct {
 	decRateHist *metrics.History
 	preRateHist *metrics.History
 
-	prevSnap metrics.Snapshot
-	prevSet  bool
-	backend  backend.Backend
-	startAt  time.Time
-	gpuName  string
+	prevSnap    metrics.Snapshot
+	prevSet     bool
+	backend     backend.Backend
+	startAt     time.Time
+	resolvedURL string
+	gpuName     string
 
 	// Last valid instantaneous TTFT/TPOT (held across ticks that have no new data)
 	lastInstTTFT float64
@@ -113,16 +114,22 @@ func (a *App) doFetch(ctx context.Context) {
 	httpCtx, httpCancel := context.WithTimeout(ctx, 3*time.Second)
 	defer httpCancel()
 
-	body, httpErr := a.fetcher.Fetch(httpCtx, a.cfg.MetricsURL())
+	url := a.cfg.MetricsURL()
+	if a.resolvedURL != "" {
+		url = a.resolvedURL
+	}
+	body, httpErr := a.fetcher.Fetch(httpCtx, url)
 
 	if a.cfg.Backend != "auto" && a.backend == nil {
 		a.backend = backend.ByName(a.cfg.Backend)
 	}
+	if httpErr != nil && a.resolvedURL == "" && a.cfg.Probeable() {
+		if pbody, ok := a.probeAlternates(httpCtx); ok {
+			body, httpErr = pbody, nil
+		}
+	}
 	if a.backend == nil && httpErr == nil {
 		a.backend = backend.Detect(body)
-	}
-	if a.backend == nil {
-		a.backend = &backend.VLLM{}
 	}
 
 	var snap metrics.Snapshot
@@ -243,8 +250,13 @@ func (a *App) doFetch(ctx context.Context) {
 		}
 	}
 
+	backendName := "—"
+	if a.backend != nil {
+		backendName = a.backend.Name()
+	}
+
 	a.program.Send(ui.TickMsg{
-		Backend:  a.backend.Name(),
+		Backend:  backendName,
 		GPUName:  a.gpuName,
 		Snap:     snap,
 		Delta:    delta,
@@ -255,4 +267,26 @@ func (a *App) doFetch(ctx context.Context) {
 		UtilHist: a.utilHist.ValuesInto(),
 		KVHist:   a.kvHist.ValuesInto(),
 	})
+}
+
+// probeAlternates scans the candidate ports for a live metrics endpoint and
+// records the winner in resolvedURL. It returns the winning body so the
+// caller can parse it in the same tick.
+func (a *App) probeAlternates(ctx context.Context) (string, bool) {
+	for _, u := range a.cfg.ProbeURLs() {
+		body, err := a.fetcher.Probe(ctx, u)
+		if err != nil {
+			continue
+		}
+		b, ok := backend.KnownDetect(body)
+		if !ok {
+			continue
+		}
+		a.resolvedURL = u
+		if a.backend == nil {
+			a.backend = b
+		}
+		return body, true
+	}
+	return "", false
 }
