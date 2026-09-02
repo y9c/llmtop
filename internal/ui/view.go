@@ -282,13 +282,18 @@ func (m Model) buildView() string {
 	if s.PrefixCacheQueries > 0 {
 		chr = s.PrefixCacheHits / s.PrefixCacheQueries * 100
 	}
-	draftAcceptPct := d.AcceptRate * 100
-	if draftAcceptPct == 0 && s.SpecDraftToksTotal > 0 {
-		draftAcceptPct = s.SpecAcceptedTotal / s.SpecDraftToksTotal * 100
+	var draftAcceptPct float64
+	if s.SpecAcceptRate > 0 {
+		draftAcceptPct = s.SpecAcceptRate * 100
+	} else {
+		draftAcceptPct = d.AcceptRate * 100
+		if draftAcceptPct == 0 && s.SpecDraftToksTotal > 0 {
+			draftAcceptPct = s.SpecAcceptedTotal / s.SpecDraftToksTotal * 100
+		}
 	}
 	rej := s.SpecDraftToksTotal - s.SpecAcceptedTotal
-	accPerDraftBatch := 0.0
-	if s.SpecDraftsTotal > 0 {
+	accPerDraftBatch := s.SpecAcceptLen
+	if accPerDraftBatch == 0 && s.SpecDraftsTotal > 0 {
 		accPerDraftBatch = s.SpecAcceptedTotal / s.SpecDraftsTotal
 	}
 
@@ -396,15 +401,21 @@ func (m Model) buildView() string {
 			tagAccept+" "+colorPctInline(draftAcceptPct)+"  "+
 				tagTD+" "+styleValPurple.Render(fmt.Sprintf("%.2f", accPerDraftBatch))+"  "+
 				tagDraft+" "+styleValYellow.Render(fmtNum(s.SpecDraftsTotal)))
+		// Rejected drafts need real cumulative counters (vLLM); SGLang exports
+		// none, so a 0 there would falsely imply zero rejections.
+		rejStr := fmtNum(rej)
+		if s.SpecDraftToksTotal == 0 {
+			rejStr = "-"
+		}
 		// Row 2: rej hit q
 		if s.PrefixCacheQueries > 0 || s.PromptCachedTotal > 0 {
 			spRows = append(spRows,
-				tagRej+" "+styleValRed.Render(fmtNum(rej))+"  "+
+				tagRej+" "+styleValRed.Render(rejStr)+"  "+
 					tagHit+" "+colorPctInline(chr)+"  "+
 					tagQ+" "+styleValTeal.Render(fmtNum(s.PrefixCacheQueries)))
 		} else {
 			spRows = append(spRows,
-				tagRej+" "+styleValRed.Render(fmtNum(rej)))
+				tagRej+" "+styleValRed.Render(rejStr))
 		}
 		// Row 3+: acc positions (may be long, keep separate)
 		if len(s.SpecAcceptedPos) > 0 {
