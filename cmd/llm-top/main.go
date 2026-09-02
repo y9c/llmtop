@@ -23,7 +23,7 @@ func main() {
 	debug.SetGCPercent(200)
 
 	cfg := config.Parse(version)
-	f := fetcher.New(5*time.Second, 3)
+	f := fetcher.New(5*time.Second, 3, cfg.APIKey)
 	gpu := collector.NewNVMLCollector(cfg.GPUID)
 	defer gpu.Close()
 

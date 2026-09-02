@@ -15,7 +15,41 @@ type Config struct {
 	Rate    time.Duration
 	GPUID   int
 	URL     string
+	APIKey  string
 	Version string
+
+	// explicitHost/Port/URL record whether the target was set explicitly
+	// (via --host/--port/--url or env). When none is set, llmtop is on fully
+	// default config and may auto-probe alternative ports on failure.
+	explicitHost bool
+	explicitPort bool
+	explicitURL  bool
+}
+
+// probePorts are tried in order when the default URL fails AND no target was
+// configured explicitly. Kept small and ordered by likelihood to keep the
+// scan fast.
+var probePorts = []int{8000, 30000, 8001, 8080, 9090, 8002, 11434}
+
+// Probeable returns whether llmtop may auto-probe alternative ports. This is
+// only true when the user left the target fully default (no --host, --port,
+// --url, or matching env var). If they set an explicit target, we respect it
+// and surface the error instead of silently connecting elsewhere.
+func (c *Config) Probeable() bool {
+	return !c.explicitHost && !c.explicitPort && !c.explicitURL
+}
+
+// ProbeURLs returns the list of candidate metrics URLs to try when Probeable()
+// and the default fetch fails. Returns nil otherwise.
+func (c *Config) ProbeURLs() []string {
+	if !c.Probeable() {
+		return nil
+	}
+	urls := make([]string, 0, len(probePorts))
+	for _, p := range probePorts {
+		urls = append(urls, fmt.Sprintf("http://%s:%d/metrics", c.Host, p))
+	}
+	return urls
 }
 
 // MetricsURL returns the full metrics URL based on the backend.
@@ -45,10 +79,12 @@ func Parse(version string) *Config {
 	// Env overrides
 	if v := os.Getenv("LLM_TOP_HOST"); v != "" {
 		cfg.Host = v
+		cfg.explicitHost = true
 	}
 	if v := os.Getenv("LLM_TOP_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.Port = p
+			cfg.explicitPort = true
 		}
 	}
 	if v := os.Getenv("LLM_TOP_BACKEND"); v != "" {
@@ -59,6 +95,9 @@ func Parse(version string) *Config {
 			cfg.Rate = d
 		}
 	}
+	if v := os.Getenv("LLM_TOP_API_KEY"); v != "" {
+		cfg.APIKey = v
+	}
 	if v := os.Getenv("LLM_TOP_GPU"); v != "" {
 		if g, err := strconv.Atoi(v); err == nil {
 			cfg.GPUID = g
@@ -67,6 +106,7 @@ func Parse(version string) *Config {
 
 	// Flag overrides (env already set)
 	flag.StringVar(&cfg.URL, "url", cfg.URL, "Full metrics URL (overrides host/port)")
+	flag.StringVar(&cfg.APIKey, "api-key", cfg.APIKey, "API key sent as Bearer token")
 	flag.StringVar(&cfg.Host, "host", cfg.Host, "Metrics host")
 	flag.IntVar(&cfg.Port, "port", cfg.Port, "Metrics port")
 	flag.StringVar(&cfg.Backend, "backend", cfg.Backend, "Backend (auto/vllm/sglang/ollama/llamacpp)")
@@ -78,6 +118,7 @@ func Parse(version string) *Config {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\nOptions:\n", os.Args[0])
 		printFlag("--url", cfg.URL, "Full metrics URL (overrides host/port)")
+		printFlag("--api-key", cfg.APIKey, "API key sent as Bearer token")
 		printFlag("--host", cfg.Host, "Metrics host")
 		printFlag("--port", cfg.Port, "Metrics port")
 		printFlag("--backend", cfg.Backend, "Backend (auto/vllm/sglang/ollama/llamacpp)")
@@ -88,6 +129,17 @@ func Parse(version string) *Config {
 	}
 
 	flag.Parse()
+
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "host":
+			cfg.explicitHost = true
+		case "port":
+			cfg.explicitPort = true
+		case "url":
+			cfg.explicitURL = true
+		}
+	})
 
 	if *showHelp {
 		flag.Usage()

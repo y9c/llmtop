@@ -12,9 +12,10 @@ import (
 type Fetcher struct {
 	client  *http.Client
 	retries int
+	apiKey  string
 }
 
-func New(timeout time.Duration, retries int) *Fetcher {
+func New(timeout time.Duration, retries int, apiKey string) *Fetcher {
 	return &Fetcher{
 		client: &http.Client{
 			Timeout: timeout,
@@ -29,6 +30,7 @@ func New(timeout time.Duration, retries int) *Fetcher {
 			},
 		},
 		retries: retries,
+		apiKey:  apiKey,
 	}
 }
 
@@ -54,10 +56,19 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (string, error) {
 	return "", fmt.Errorf("fetch failed after %d retries: %w", f.retries, lastErr)
 }
 
+// Probe does a single fast fetch with no retries or backoff, used for
+// scanning candidate ports. Returns an error if the target is unreachable.
+func (f *Fetcher) Probe(ctx context.Context, url string) (string, error) {
+	return f.do(ctx, url)
+}
+
 func (f *Fetcher) do(ctx context.Context, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return "", fmt.Errorf("create request: %w", err)
+	}
+	if f.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+f.apiKey)
 	}
 	resp, err := f.client.Do(req)
 	if err != nil {
