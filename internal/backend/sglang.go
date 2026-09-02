@@ -13,11 +13,37 @@ type SGLang struct{}
 
 func (SGLang) Name() string { return "SGLang" }
 
-func (SGLang) Detect(body string) bool { return strings.Contains(body, "sglang:") }
+func (SGLang) Detect(body string) bool {
+	if strings.Contains(body, "sglang:") {
+		return true
+	}
+	// Real SGLang can serve vLLM-compatible metric names, with or without the
+	// sglang: prefix and with pre-0.5 gauge names, so disambiguate by
+	// SGLang-only gauges that a genuine vLLM never exports.
+	for _, m := range sglangOnlyMarkers {
+		if strings.Contains(body, m) {
+			return true
+		}
+	}
+	return false
+}
+
+// Matched as bare substrings so prefixed (sglang:token_usage) and unprefixed
+// bodies both detect. None of these names is exported by a genuine vLLM.
+var sglangOnlyMarkers = []string{
+	"token_usage",
+	"cache_hit_rate",
+	"num_running_reqs",
+	"num_running_requests",
+	"num_queue_reqs",
+	"num_waiting_requests",
+	"spec_accept_length",
+	"gen_throughput",
+}
 
 // gaugeRe matches a labeled or bare Prometheus sample line.
 func gaugeRe(name string) *regexp.Regexp {
-	return regexp.MustCompile(`sglang:` + name + `(?:\{[^}]*\})?\s+([\d.eE+-]+)`)
+	return regexp.MustCompile(`(?:sglang:)?` + name + `(?:\{[^}]*\})?\s+([\d.eE+-]+)`)
 }
 
 // sumGauge totals every sample of a metric. SGLang exports token counters as
@@ -47,30 +73,31 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		re  *regexp.Regexp
 		set func(*metrics.Snapshot, float64)
 	}{
-		{"sglang:prompt_tokens_total", gaugeRe(`prompt_tokens_total`),
+		{"prompt_tokens_total", gaugeRe(`prompt_tokens_total`),
 			func(s *metrics.Snapshot, v float64) { s.PromptTokensTotal = sumGauge(`prompt_tokens_total`, body) }},
-		{"sglang:generation_tokens_total", gaugeRe(`generation_tokens_total`),
+		{"generation_tokens_total", gaugeRe(`generation_tokens_total`),
 			func(s *metrics.Snapshot, v float64) { s.GenTokensTotal = sumGauge(`generation_tokens_total`, body) }},
-		// SGLang >= 0.5 renamed the request gauges (was num_running_requests / num_waiting_requests)
-		{"sglang:num_running_reqs", gaugeRe(`num_running_reqs`),
+		// SGLang >= 0.5 exports num_running_reqs/num_queue_reqs; older
+		// releases used num_running_requests/num_waiting_requests.
+		{"num_", gaugeRe(`num_(?:running_reqs|running_requests)`),
 			func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
-		{"sglang:num_queue_reqs", gaugeRe(`num_queue_reqs`),
+		{"num_", gaugeRe(`num_(?:queue_reqs|waiting_requests)`),
 			func(s *metrics.Snapshot, v float64) { s.WaitingReqs = v }},
 		// token_usage is a 0-1 fraction; app.go pushes KVCacheUsagePct*100 into the KV chart
-		{"sglang:token_usage", gaugeRe(`token_usage`),
+		{"token_usage", gaugeRe(`token_usage`),
 			func(s *metrics.Snapshot, v float64) { s.KVCacheUsagePct = v }},
-		{"sglang:cache_hit_rate", gaugeRe(`cache_hit_rate`),
+		{"cache_hit_rate", gaugeRe(`cache_hit_rate`),
 			func(s *metrics.Snapshot, v float64) { s.PrefixCacheHits = v }},
 		// speculative decoding: verify calls == number of draft batches (monotonic)
-		{"sglang:spec_verify_calls_total", gaugeRe(`spec_verify_calls_total`),
+		{"spec_verify_calls_total", gaugeRe(`spec_verify_calls_total`),
 			func(s *metrics.Snapshot, v float64) { s.SpecDraftsTotal = v }},
-		{"sglang:spec_accept_length", gaugeRe(`spec_accept_length`),
+		{"spec_accept_length", gaugeRe(`spec_accept_length`),
 			func(s *metrics.Snapshot, v float64) { specAcceptLen = v }},
-		{"sglang:spec_num_draft_tokens", gaugeRe(`spec_num_draft_tokens`),
+		{"spec_num_draft_tokens", gaugeRe(`spec_num_draft_tokens`),
 			func(s *metrics.Snapshot, v float64) { specDraftCap = v }},
-		{"sglang:time_to_first_token_seconds_sum", gaugeRe(`time_to_first_token_seconds_sum`),
+		{"time_to_first_token_seconds_sum", gaugeRe(`time_to_first_token_seconds_sum`),
 			func(s *metrics.Snapshot, v float64) { s.TTFTTotalS = v }},
-		{"sglang:time_to_first_token_seconds_count", gaugeRe(`time_to_first_token_seconds_count`),
+		{"time_to_first_token_seconds_count", gaugeRe(`time_to_first_token_seconds_count`),
 			func(s *metrics.Snapshot, v float64) { s.TTFTCount = v }},
 	}
 

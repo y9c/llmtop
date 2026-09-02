@@ -34,6 +34,60 @@ func TestSGLangDetect(t *testing.T) {
 	}
 }
 
+func TestSGLangDetectUnprefixedOldNames(t *testing.T) {
+	var b SGLang
+	body := "num_running_requests 2\nnum_waiting_requests 1\ntoken_usage 0.5\ncache_hit_rate 0.3\n"
+	if !b.Detect(body) {
+		t.Fatal("Detect(unprefixed pre-0.5 body) should be true")
+	}
+}
+
+func TestSGLangDetectRejectsVLLM(t *testing.T) {
+	var b SGLang
+	body := "vllm:num_requests_running 1\nvllm:num_requests_waiting 0\nvllm:kv_cache_usage_perc 0.5\nvllm:prompt_tokens_total 100\n"
+	if b.Detect(body) {
+		t.Fatal("genuine vLLM body must not detect as SGLang")
+	}
+}
+
+func TestSGLangParseUnprefixedOldNames(t *testing.T) {
+	var b SGLang
+	body := `num_running_requests 3
+num_waiting_requests 2
+token_usage 0.42
+cache_hit_rate 0.31
+prompt_tokens_total 5000
+generation_tokens_total 15000
+time_to_first_token_seconds_sum 12.5
+time_to_first_token_seconds_count 25
+`
+	s, err := b.Parse(body)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	if s.RunningReqs != 3 {
+		t.Fatalf("RunningReqs: want 3, got %v", s.RunningReqs)
+	}
+	if s.WaitingReqs != 2 {
+		t.Fatalf("WaitingReqs: want 2, got %v", s.WaitingReqs)
+	}
+	if s.KVCacheUsagePct != 0.42 {
+		t.Fatalf("KVCacheUsagePct: want 0.42, got %v", s.KVCacheUsagePct)
+	}
+	if s.PrefixCacheHits != 0.31 {
+		t.Fatalf("PrefixCacheHits: want 0.31, got %v", s.PrefixCacheHits)
+	}
+	if s.PromptTokensTotal != 5000 {
+		t.Fatalf("PromptTokensTotal: want 5000, got %v", s.PromptTokensTotal)
+	}
+	if s.GenTokensTotal != 15000 {
+		t.Fatalf("GenTokensTotal: want 15000, got %v", s.GenTokensTotal)
+	}
+	if s.TTFTCount != 25 || s.TTFTTotalS != 12.5 {
+		t.Fatalf("TTFT: want count=25 sum=12.5, got %v/%v", s.TTFTCount, s.TTFTTotalS)
+	}
+}
+
 func TestSGLangParse(t *testing.T) {
 	var b SGLang
 	s, err := b.Parse(sglangSample)
