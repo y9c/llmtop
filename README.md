@@ -31,6 +31,7 @@ llmtop --url http://ollama:11434/api/ps  # Custom metrics URL
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--url` | `""` | Full metrics URL (overrides host/port) |
+| `--api-key` | `""` | API key sent as Bearer token (auth-gated servers) |
 | `--host` | `localhost` | Metrics host |
 | `--port` | `8000` | Metrics port |
 | `--backend` | `auto` | Force backend (`vllm`, `sglang`, `ollama`, `llamacpp`) |
