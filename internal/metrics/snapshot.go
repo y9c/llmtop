@@ -33,6 +33,8 @@ type Snapshot struct {
 	SpecDraftToksTotal float64
 	SpecAcceptedTotal  float64
 	SpecAcceptedPos    []float64
+	SpecAcceptLen      float64 // server-side mean accepted tokens per verify pass (SGLang gauge)
+	SpecAcceptRate     float64 // server-side acceptance rate 0-1 (SGLang gauge)
 
 	// Prefix Cache
 	PrefixCacheHits    float64

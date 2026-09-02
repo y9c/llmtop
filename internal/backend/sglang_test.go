@@ -12,7 +12,7 @@ sglang:token_usage{tp_rank="0"} 0.85
 sglang:cache_hit_rate{tp_rank="0"} 0.31
 sglang:spec_verify_calls_total{engine_type="unified"} 40
 sglang:spec_accept_length{tp_rank="0"} 2.5
-sglang:spec_num_draft_tokens{tp_rank="0"} 10
+sglang:spec_accept_rate{tp_rank="0"} 0.7
 sglang:time_to_first_token_seconds_sum{model_name="m"} 12.5
 sglang:time_to_first_token_seconds_count{model_name="m"} 25
 `
@@ -113,12 +113,15 @@ func TestSGLangParse(t *testing.T) {
 	if s.SpecDraftsTotal != 40 {
 		t.Fatalf("SpecDraftsTotal: want 40, got %v", s.SpecDraftsTotal)
 	}
-	// reconstructed cumulative totals: verify_calls * draft_cap / * accept_len
-	if s.SpecDraftToksTotal != 400 {
-		t.Fatalf("SpecDraftToksTotal: want 400, got %v", s.SpecDraftToksTotal)
+	// no reconstructed cumulative totals: the server exports no such counters
+	if s.SpecDraftToksTotal != 0 || s.SpecAcceptedTotal != 0 {
+		t.Fatalf("spec totals must not be reconstructed, got drafted=%v accepted=%v", s.SpecDraftToksTotal, s.SpecAcceptedTotal)
 	}
-	if s.SpecAcceptedTotal != 100 {
-		t.Fatalf("SpecAcceptedTotal: want 100, got %v", s.SpecAcceptedTotal)
+	if s.SpecAcceptLen != 2.5 {
+		t.Fatalf("SpecAcceptLen: want 2.5, got %v", s.SpecAcceptLen)
+	}
+	if s.SpecAcceptRate != 0.7 {
+		t.Fatalf("SpecAcceptRate: want 0.7, got %v", s.SpecAcceptRate)
 	}
 	if s.TTFTCount != 25 || s.TTFTTotalS != 12.5 {
 		t.Fatalf("TTFT: want count=25 sum=12.5, got %v/%v", s.TTFTCount, s.TTFTTotalS)

@@ -63,11 +63,6 @@ func sumGauge(name string, body string) float64 {
 func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 	s := metrics.Snapshot{Timestamp: time.Now()}
 
-	var (
-		specAcceptLen float64 // windowed mean accepted tokens per verify pass
-		specDraftCap  float64 // configured draft tokens per verify pass
-	)
-
 	rules := []struct {
 		key string
 		re  *regexp.Regexp
@@ -91,10 +86,12 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		// speculative decoding: verify calls == number of draft batches (monotonic)
 		{"spec_verify_calls_total", gaugeRe(`spec_verify_calls_total`),
 			func(s *metrics.Snapshot, v float64) { s.SpecDraftsTotal = v }},
+		// acceptance gauges are server-side windowed means; the server exports
+		// no cumulative drafted/accepted counters, so never reconstruct them
 		{"spec_accept_length", gaugeRe(`spec_accept_length`),
-			func(s *metrics.Snapshot, v float64) { specAcceptLen = v }},
-		{"spec_num_draft_tokens", gaugeRe(`spec_num_draft_tokens`),
-			func(s *metrics.Snapshot, v float64) { specDraftCap = v }},
+			func(s *metrics.Snapshot, v float64) { s.SpecAcceptLen = v }},
+		{"spec_accept_rate", gaugeRe(`spec_accept_rate`),
+			func(s *metrics.Snapshot, v float64) { s.SpecAcceptRate = v }},
 		{"time_to_first_token_seconds_sum", gaugeRe(`time_to_first_token_seconds_sum`),
 			func(s *metrics.Snapshot, v float64) { s.TTFTTotalS = v }},
 		{"time_to_first_token_seconds_count", gaugeRe(`time_to_first_token_seconds_count`),
@@ -111,15 +108,6 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 				rule.set(&s, v)
 			}
 		}
-	}
-
-	// SGLang exports no cumulative drafted/accepted token counters — only a
-	// monotonic verify-call counter plus windowed mean accept length and the
-	// configured draft size. Reconstruct cumulative totals so that deltas
-	// (accept rate, rejected tokens) stay meaningful across samples.
-	if s.SpecDraftsTotal > 0 && specDraftCap > 0 {
-		s.SpecDraftToksTotal = s.SpecDraftsTotal * specDraftCap
-		s.SpecAcceptedTotal = s.SpecDraftsTotal * specAcceptLen
 	}
 
 	// cache_hit_rate is a windowed ratio, not hits/queries counters; fake the
