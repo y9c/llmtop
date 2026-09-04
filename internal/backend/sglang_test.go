@@ -13,8 +13,12 @@ sglang:cache_hit_rate{tp_rank="0"} 0.31
 sglang:spec_verify_calls_total{engine_type="unified"} 40
 sglang:spec_accept_length{tp_rank="0"} 2.5
 sglang:spec_accept_rate{tp_rank="0"} 0.7
-sglang:time_to_first_token_seconds_sum{model_name="m"} 12.5
-sglang:time_to_first_token_seconds_count{model_name="m"} 25
+sglang:time_to_first_token_seconds_sum{model_name="m",is_streaming="false"} 12.5
+sglang:time_to_first_token_seconds_count{model_name="m",is_streaming="false"} 25
+sglang:time_to_first_token_seconds_sum{model_name="m",is_streaming="true"} 10.5
+sglang:time_to_first_token_seconds_count{model_name="m",is_streaming="true"} 15
+sglang:inter_token_latency_seconds_sum{model_name="m"} 30.0
+sglang:inter_token_latency_seconds_count{model_name="m"} 100
 `
 
 func TestSGLangName(t *testing.T) {
@@ -123,7 +127,10 @@ func TestSGLangParse(t *testing.T) {
 	if s.SpecAcceptRate != 0.7 {
 		t.Fatalf("SpecAcceptRate: want 0.7, got %v", s.SpecAcceptRate)
 	}
-	if s.TTFTCount != 25 || s.TTFTTotalS != 12.5 {
-		t.Fatalf("TTFT: want count=25 sum=12.5, got %v/%v", s.TTFTCount, s.TTFTTotalS)
+	if s.TTFTCount != 40 || s.TTFTTotalS != 23 {
+		t.Fatalf("TTFT: want count=40 sum=23 (both streaming series summed), got %v/%v", s.TTFTCount, s.TTFTTotalS)
+	}
+	if s.TPOTCount != 100 || s.TPOTTotalS != 30.0 {
+		t.Fatalf("TPOT: want count=100 sum=30, got %v/%v", s.TPOTCount, s.TPOTTotalS)
 	}
 }

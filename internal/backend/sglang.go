@@ -93,9 +93,17 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		{"spec_accept_rate", gaugeRe(`spec_accept_rate`),
 			func(s *metrics.Snapshot, v float64) { s.SpecAcceptRate = v }},
 		{"time_to_first_token_seconds_sum", gaugeRe(`time_to_first_token_seconds_sum`),
-			func(s *metrics.Snapshot, v float64) { s.TTFTTotalS = v }},
+			func(s *metrics.Snapshot, v float64) { s.TTFTTotalS = sumGauge(`time_to_first_token_seconds_sum`, body) }},
 		{"time_to_first_token_seconds_count", gaugeRe(`time_to_first_token_seconds_count`),
-			func(s *metrics.Snapshot, v float64) { s.TTFTCount = v }},
+			func(s *metrics.Snapshot, v float64) {
+				s.TTFTCount = sumGauge(`time_to_first_token_seconds_count`, body)
+			}},
+		{"inter_token_latency_seconds_sum", gaugeRe(`inter_token_latency_seconds_sum`),
+			func(s *metrics.Snapshot, v float64) { s.TPOTTotalS = sumGauge(`inter_token_latency_seconds_sum`, body) }},
+		{"inter_token_latency_seconds_count", gaugeRe(`inter_token_latency_seconds_count`),
+			func(s *metrics.Snapshot, v float64) {
+				s.TPOTCount = sumGauge(`inter_token_latency_seconds_count`, body)
+			}},
 	}
 
 	for _, rule := range rules {
