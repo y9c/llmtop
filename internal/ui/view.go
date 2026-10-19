@@ -402,10 +402,15 @@ func (m Model) buildView() string {
 				tagTD+" "+styleValPurple.Render(fmt.Sprintf("%.2f", accPerDraftBatch))+"  "+
 				tagDraft+" "+styleValYellow.Render(fmtNum(s.SpecDraftsTotal)))
 		// Rejected drafts need real cumulative counters (vLLM); SGLang exports
-		// none, so a 0 there would falsely imply zero rejections.
+		// none, so a 0 there would falsely imply zero rejections. Fall back to
+		// the server's acceptance gauge: reject rate = 1 - spec_accept_rate.
 		rejStr := fmtNum(rej)
 		if s.SpecDraftToksTotal == 0 {
-			rejStr = "-"
+			if s.SpecAcceptRate > 0 {
+				rejStr = fmt.Sprintf("%s", colorPctInline((1-s.SpecAcceptRate)*100))
+			} else {
+				rejStr = "-"
+			}
 		}
 		// Row 2: rej hit q
 		if s.PrefixCacheQueries > 0 || s.PromptCachedTotal > 0 {
