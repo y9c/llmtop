@@ -50,9 +50,27 @@ func gaugeRe(name string) *regexp.Regexp {
 // multiple labeled series (e.g. is_streaming="true"/"false"); the streaming
 // series is the only one that advances during generation, so both must count.
 func sumGauge(name string, body string) float64 {
-	re := gaugeRe(name)
 	total := 0.0
-	for _, m := range re.FindAllStringSubmatch(body, -1) {
+	for _, m := range gaugeRe(name).FindAllStringSubmatch(body, -1) {
+		if v, err := strconv.ParseFloat(m[1], 64); err == nil {
+			total += v
+		}
+	}
+	return total
+}
+
+// seriesRe builds a regexp matching a metric pattern that already carries
+// its label filter (e.g. prefill_effective_tokens_total{...mode="input"...}).
+func seriesRe(pattern string) *regexp.Regexp {
+	return regexp.MustCompile(`(?:sglang:)?` + pattern + `\s+([\d.eE+-]+)`)
+}
+
+// sumSeries totals every sample matched by a fully-formed pattern. Used when
+// a metric's series must be filtered by a particular label value (e.g. only
+// prefill_effective_tokens_total{mode="input"}).
+func sumSeries(pattern string, body string) float64 {
+	total := 0.0
+	for _, m := range seriesRe(pattern).FindAllStringSubmatch(body, -1) {
 		if v, err := strconv.ParseFloat(m[1], 64); err == nil {
 			total += v
 		}
@@ -103,6 +121,19 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		{"inter_token_latency_seconds_count", gaugeRe(`inter_token_latency_seconds_count`),
 			func(s *metrics.Snapshot, v float64) {
 				s.TPOTCount = sumGauge(`inter_token_latency_seconds_count`, body)
+			}},
+		// Live decode throughput windowed by the scheduler (single series:
+		// no per-rank repetition). Preferred over the completion-impulsed
+		// counter delta so the displayed decode rate is honest.
+		{"gen_throughput", gaugeRe(`gen_throughput`),
+			func(s *metrics.Snapshot, v float64) { s.GenTokS = v }},
+		// Prefill effective tokens, mode=input only. This incs per scheduling
+		// batch (smooth), not at request completion, so its delta is an honest
+		// prefill rate. Sum across tp ranks (only rank 0 is non-zero) for the
+		// total prefill tokens in this window.
+		{"prefill_effective_tokens_total", seriesRe(`prefill_effective_tokens_total\{[^}]*mode="input"[^}]*\}`),
+			func(s *metrics.Snapshot, v float64) {
+				s.PrefillEffectiveTotal = sumSeries(`prefill_effective_tokens_total\{[^}]*mode="input"[^}]*\}`, body)
 			}},
 	}
 

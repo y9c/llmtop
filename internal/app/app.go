@@ -19,6 +19,12 @@ import (
 // rates are smoothed for display.
 const rateAvgWindow = 5 * time.Second
 
+// prefillSmoothWindow averages prefill bursts over a longer horizon. SGLang
+// incs its prompt counter only when a request finishes, so a single large
+// prefill lands as one spike; a long window keeps that from reading as a
+// sustained "tok/s" far above what the channel sustains.
+const prefillSmoothWindow = 15 * time.Second
+
 type App struct {
 	cfg     *config.Config
 	fetcher *fetcher.Fetcher
@@ -211,15 +217,21 @@ func (a *App) doFetch(ctx context.Context) {
 	}
 
 	// Smooth bursty rates over a rolling window so prefill/decode bursts
-	// don't snap to 0 between requests.
-	window := int(rateAvgWindow / a.cfg.Rate)
-	if window < 1 {
-		window = 1
+	// don't snap to 0 between requests. Decode is a server-side windowed gauge
+	// (gen_throughput) and needs only a short smoothing; prefill counters spike
+	// on request completion, so it gets a longer horizon.
+	decWindow := int(rateAvgWindow / a.cfg.Rate)
+	if decWindow < 1 {
+		decWindow = 1
+	}
+	preWindow := int(prefillSmoothWindow / a.cfg.Rate)
+	if preWindow < 1 {
+		preWindow = 1
 	}
 	a.decRateHist.Push(delta.DecodeTokS)
 	a.preRateHist.Push(delta.PrefillTokS)
-	delta.DecodeTokS = a.decRateHist.RecentAvg(window)
-	delta.PrefillTokS = a.preRateHist.RecentAvg(window)
+	delta.DecodeTokS = a.decRateHist.RecentAvg(decWindow)
+	delta.PrefillTokS = a.preRateHist.RecentAvg(preWindow)
 
 	delta.TTFTMs = a.lastInstTTFT
 	delta.TPOTMs = a.lastInstTPOT

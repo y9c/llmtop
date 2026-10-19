@@ -48,6 +48,18 @@ type Snapshot struct {
 
 	// Server start time (from process_start_time_seconds)
 	StartTimeUnix float64
+
+	// Server-side live decode rate (SGLang gen_throughput gauge, token/s).
+	// The token counters are only inc'd when a request finishes, so a
+	// counter-delta/dt "instantaneous" rate spikes on completion. When >0 we
+	// prefer this continuous windowed gauge over the counter delta.
+	GenTokS float64
+
+	// Server-side prefill token total, mode=input series only (SGLang
+	// prefill_effective_tokens_total). Unlike prompt_tokens_total this incs
+	// per scheduling batch (smooth), not once at request completion, so its
+	// delta is a honest prefill rate.
+	PrefillEffectiveTotal float64
 }
 
 // Deltas holds per-second rates computed from two Snapshots.
@@ -86,7 +98,14 @@ func ComputeDelta(prev, cur Snapshot, dt float64) Deltas {
 		return d
 	}
 	d.DecodeTokS = (cur.GenTokensTotal - prev.GenTokensTotal) / dt
-	d.PrefillTokS = (cur.PromptTokensTotal - prev.PromptTokensTotal) / dt
+	// Prefill: prefer the per-batch smoothed counter when the server exports
+	// one (SGLang prefill_effective_tokens_total mode=input). prompt_tokens_total
+	// only jumps at request completion, which reads as a transient thousands.
+	if cur.PrefillEffectiveTotal > 0 && prev.PrefillEffectiveTotal > 0 {
+		d.PrefillTokS = (cur.PrefillEffectiveTotal - prev.PrefillEffectiveTotal) / dt
+	} else {
+		d.PrefillTokS = (cur.PromptTokensTotal - prev.PromptTokensTotal) / dt
+	}
 	// Token rates are monotonic; a negative delta means the server's counters
 	// reset (restart/relabel), so surface it as 0 rather than a negative rate.
 	if d.DecodeTokS < 0 {
@@ -94,6 +113,13 @@ func ComputeDelta(prev, cur Snapshot, dt float64) Deltas {
 	}
 	if d.PrefillTokS < 0 {
 		d.PrefillTokS = 0
+	}
+	// When the server exports a live windowed gauge (SGLang gen_throughput),
+	// prefer it over the counter delta: the counters only advance when a
+	// request *finishes*, so a single large completion makes the counter
+	// delta/dt spike to thousands. The gauge is smoothed by the scheduler.
+	if cur.GenTokS > 0 {
+		d.DecodeTokS = cur.GenTokS
 	}
 	// AcceptRate = accepted tokens / draft tokens (0-1)
 	if nd := cur.SpecDraftToksTotal - prev.SpecDraftToksTotal; nd > 0 {

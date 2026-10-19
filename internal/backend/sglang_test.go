@@ -19,6 +19,10 @@ sglang:time_to_first_token_seconds_sum{model_name="m",is_streaming="true"} 10.5
 sglang:time_to_first_token_seconds_count{model_name="m",is_streaming="true"} 15
 sglang:inter_token_latency_seconds_sum{model_name="m"} 30.0
 sglang:inter_token_latency_seconds_count{model_name="m"} 100
+sglang:gen_throughput{tp_rank="0"} 892.5
+sglang:prefill_effective_tokens_total{engine_type="unified",mode="input",tp_rank="0"} 40000
+sglang:prefill_effective_tokens_total{engine_type="unified",mode="device_hit",tp_rank="0"} 120000
+sglang:prefill_effective_tokens_total{engine_type="unified",mode="input",tp_rank="1"} 0
 `
 
 func TestSGLangName(t *testing.T) {
@@ -132,5 +136,11 @@ func TestSGLangParse(t *testing.T) {
 	}
 	if s.TPOTCount != 100 || s.TPOTTotalS != 30.0 {
 		t.Fatalf("TPOT: want count=100 sum=30, got %v/%v", s.TPOTCount, s.TPOTTotalS)
+	}
+	if s.GenTokS != 892.5 {
+		t.Fatalf("GenTokS: want 892.5, got %v", s.GenTokS)
+	}
+	if s.PrefillEffectiveTotal != 40000 {
+		t.Fatalf("PrefillEffectiveTotal: want 40000 (input mode only, device_hit excluded), got %v", s.PrefillEffectiveTotal)
 	}
 }
