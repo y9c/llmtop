@@ -356,19 +356,16 @@ func (m Model) buildView() string {
 	wr := colorValInline(s.WaitingReqs, 3, 0)
 	tpRows = append(tpRows, tagRun+" "+rr+"  "+tagWait+" "+wr)
 
-	// Row 2: pre/dec — instant(cumulative_avg)
-	preAvgStr := "-"
-	decAvgStr := "-"
-	if d.PreCumAvg > 0 {
-		preAvgStr = fmt.Sprintf("%.0f", d.PreCumAvg)
-	}
-	if d.DecCumAvg > 0 {
-		decAvgStr = fmt.Sprintf("%.0f", d.DecCumAvg)
-	}
+	// Row 2: pre/dec — instant(cumulative_total). The parenthesised value is
+	// the total tokens the server has produced since it started (summed across
+	// streaming/non-streaming series), shown with K/M/B shorthand so "how much
+	// work has this system done" is readable at a glance.
+	preTotal := fmtNum(s.PromptTokensTotal)
+	decTotal := fmtNum(s.GenTokensTotal)
 	preInst := styleValCyan.Render(fmt.Sprintf("%.0f", d.PrefillTokS))
-	preAvg := styleParen.Render("(") + styleAvgCyan.Render(preAvgStr) + styleParen.Render(")")
+	preAvg := styleParen.Render("(") + styleAvgCyan.Render(preTotal) + styleParen.Render(")")
 	decInst := styleDecChart.Render(fmt.Sprintf("%.0f", d.DecodeTokS))
-	decAvg := styleParen.Render("(") + styleAvgCyan.Render(decAvgStr) + styleParen.Render(")")
+	decAvg := styleParen.Render("(") + styleAvgCyan.Render(decTotal) + styleParen.Render(")")
 	tpRows = append(tpRows, tagPre+" "+preInst+preAvg+"  "+tagDec+" "+decInst+decAvg)
 
 	// Row 3: ttft/tpot — instant(lifecycle_avg)
