@@ -44,6 +44,7 @@ var (
 	styleValRed    = lipgloss.NewStyle().Foreground(lipgloss.Color("#f87171")).Bold(true)
 	styleValTeal   = lipgloss.NewStyle().Foreground(lipgloss.Color("#2dd4bf")).Bold(true)
 	styleValPink   = lipgloss.NewStyle().Foreground(lipgloss.Color("#f472b6")).Bold(true)
+	styleValGray   = lipgloss.NewStyle().Foreground(lipgloss.Color("#9ca3af")).Bold(true)
 
 	styleTH   = lipgloss.NewStyle().Foreground(lipgloss.Color("#4ade80")).Bold(true) // Throughput header
 	styleSpec = lipgloss.NewStyle().Foreground(lipgloss.Color("#c084fc")).Bold(true) // Speculative header
@@ -356,16 +357,22 @@ func (m Model) buildView() string {
 	wr := colorValInline(s.WaitingReqs, 3, 0)
 	tpRows = append(tpRows, tagRun+" "+rr+"  "+tagWait+" "+wr)
 
-	// Row 2: pre/dec — instant(cumulative_total). The parenthesised value is
-	// the total tokens the server has produced since it started (summed across
-	// streaming/non-streaming series), shown with K/M/B shorthand so "how much
-	// work has this system done" is readable at a glance.
-	preTotal := fmtNum(s.PromptTokensTotal)
-	decTotal := fmtNum(s.GenTokensTotal)
+	// Row 2: pre/dec — instant(cumulative_avg). Instant rate is the live value;
+	// the parenthesised number is the avg rate over active ticks. The prm/gen
+	// row below already shows cumulative totals from server start, so no
+	// duplication here.
+	preAvgStr := "-"
+	decAvgStr := "-"
+	if d.PreCumAvg > 0 {
+		preAvgStr = fmt.Sprintf("%.0f", d.PreCumAvg)
+	}
+	if d.DecCumAvg > 0 {
+		decAvgStr = fmt.Sprintf("%.0f", d.DecCumAvg)
+	}
 	preInst := styleValCyan.Render(fmt.Sprintf("%.0f", d.PrefillTokS))
-	preAvg := styleParen.Render("(") + styleAvgCyan.Render(preTotal) + styleParen.Render(")")
+	preAvg := styleParen.Render("(") + styleAvgCyan.Render(preAvgStr) + styleParen.Render(")")
 	decInst := styleDecChart.Render(fmt.Sprintf("%.0f", d.DecodeTokS))
-	decAvg := styleParen.Render("(") + styleAvgCyan.Render(decTotal) + styleParen.Render(")")
+	decAvg := styleParen.Render("(") + styleAvgCyan.Render(decAvgStr) + styleParen.Render(")")
 	tpRows = append(tpRows, tagPre+" "+preInst+preAvg+"  "+tagDec+" "+decInst+decAvg)
 
 	// Row 3: ttft/tpot — instant(lifecycle_avg)
@@ -389,9 +396,11 @@ func (m Model) buildView() string {
 	tpotInst := styleValGreen.Render(fmt.Sprintf("%.0fms", d.TPOTMs))
 	tpRows = append(tpRows, tagTTFT+" "+ttftInst+ttftLife+"  "+tagTPOT+" "+tpotInst+tpotLife)
 
-	// Row 4: prm/gen/up — lifecycle totals
-	tpRows = append(tpRows, tagPrm+" "+fmtNum(s.PromptTokensTotal)+"  "+
-		tagGen+" "+fmtNum(s.GenTokensTotal)+"  "+tagUp+" "+uptime)
+	// Row 4: prm/gen/up — lifecycle totals. Values get the same treatment as
+	// the other metric values so the totals read consistently (prefill in cyan,
+	// decode in green, uptime in muted gray).
+	tpRows = append(tpRows, tagPrm+" "+styleValCyan.Render(fmtNum(s.PromptTokensTotal))+"  "+
+		tagGen+" "+styleValGreen.Render(fmtNum(s.GenTokensTotal))+"  "+tagUp+" "+styleValGray.Render(uptime))
 
 	// --- Right column rows ---
 

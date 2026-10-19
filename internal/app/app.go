@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"os/exec"
+	"sort"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -253,10 +256,19 @@ func (a *App) doFetch(ctx context.Context) {
 	a.decHist.Push(delta.DecodeTokS)
 	a.preHist.Push(delta.PrefillTokS)
 
-	// Uptime from server process_start_time_seconds; fall back to app uptime if unavailable
+	// Uptime: prefer the server process start (real backend uptime). Order:
+	// 1) process_start_time_seconds (vLLM, Prometheus default)
+	// 2) local process probe (SGLang doesn't export it; llmtop usually runs on
+	//    the same host as the server, so read the launching process directly)
+	// 3) fall back to llmtop's own start time (remote)
 	uptime := time.Since(a.startAt)
 	if snap.StartTimeUnix > 0 {
 		uptime = time.Since(time.Unix(int64(snap.StartTimeUnix), 0))
+		if uptime < 0 {
+			uptime = 0
+		}
+	} else if t, ok := serverProcessStart(); ok {
+		uptime = time.Since(t)
 		if uptime < 0 {
 			uptime = 0
 		}
@@ -279,6 +291,64 @@ func (a *App) doFetch(ctx context.Context) {
 		UtilHist: a.utilHist.ValuesInto(),
 		KVHist:   a.kvHist.ValuesInto(),
 	})
+}
+
+// serverProcessStart returns the oldest local host process that serves an LLM
+// backend. SGLang does not export process_start_time_seconds, and llmtop is
+// usually on the same host as the server, so we read the launching process
+// directly. Returns false if no matching process is found (e.g. remote target).
+func serverProcessStart() (time.Time, bool) {
+	out, err := exec.Command("ps", "-eo", "lstart=,args=").Output()
+	if err != nil {
+		return time.Time{}, false
+	}
+	var starts []time.Time
+	for _, ln := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if isServerProcess(ln) {
+			if t, ok := parseProcessStart(ln); ok {
+				starts = append(starts, t)
+			}
+		}
+	}
+	if len(starts) == 0 {
+		return time.Time{}, false
+	}
+	sort.Slice(starts, func(i, j int) bool { return starts[i].Before(starts[j]) })
+	return starts[0], true
+}
+
+// isServerProcess reports whether a ps line belongs to a known LLM server
+// launch command. Keys are the actual CLI entrypoints (not bare 'vllm', which
+// appears in many unrelated paths) so we only match real server processes.
+func isServerProcess(line string) bool {
+	for _, kw := range []string{"sglang.launch_server", "vllm serve", "llama-server", "llama.cpp/server"} {
+		if strings.Contains(line, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// parseProcessStart extracts the leading lstart== field from a ps line.
+// The lstart field is split on whitespace; taking the first 5 fields up to the
+// year (e.g. "Mon Oct 19 08:49:16 2026") gives a parseable timestamp.
+func parseProcessStart(line string) (time.Time, bool) {
+	// lstart is the first token: "Mon Oct 19 08:49:16 2026". Everything after
+	// is args (may contain spaces), so cut at the first occurrence of a year
+	// boundary: the date is exactly the first terms. Find index by splitting.
+	f := strings.Fields(line)
+	if len(f) < 5 {
+		return time.Time{}, false
+	}
+	// Format: Mon Oct 19 08:49:16 2026 args...  (date is 11 chars + year)
+	startStr := strings.Join(f[:5], " ")
+	// ps lstart is stamped in the host's local timezone; ParseInLocation keeps
+	// that zone so time.Since is a wall-clock duration, not an offset artifact.
+	t, err := time.ParseInLocation("Mon Jan 2 15:04:05 2006", startStr, time.Local)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }
 
 // probeAlternates scans the candidate ports for a live metrics endpoint and
