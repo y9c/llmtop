@@ -40,6 +40,12 @@ type Snapshot struct {
 	PrefixCacheHits    float64
 	PrefixCacheQueries float64
 
+	// CacheHitRate is a stable prefix-cache hit percentage (0-100). Filled by
+	// SGLang from cumulative hit/input token counters (unlike cache_hit_rate,
+	// a windowed ratio that drops to 0 when idle). When >0 the UI shows this
+	// instead of computing PrefixCacheHits/PrefixCacheQueries.
+	CacheHitRate float64
+
 	// Latency histograms (from vLLM _sum / _count)
 	TTFTTotalS float64 // vllm:time_to_first_token_seconds_sum
 	TTFTCount  float64 // vllm:time_to_first_token_seconds_count

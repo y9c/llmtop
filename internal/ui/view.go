@@ -279,7 +279,11 @@ func (m Model) buildView() string {
 	}
 
 	chr := 0.0
-	if s.PrefixCacheQueries > 0 {
+	// SGLang fills a stable cumulative hit rate; prefer it over the vLLM
+	// hits/queries division when present.
+	if s.CacheHitRate > 0 {
+		chr = s.CacheHitRate
+	} else if s.PrefixCacheQueries > 0 {
 		chr = s.PrefixCacheHits / s.PrefixCacheQueries * 100
 	}
 	var draftAcceptPct float64
@@ -413,11 +417,17 @@ func (m Model) buildView() string {
 			}
 		}
 		// Row 2: rej hit q
-		if s.PrefixCacheQueries > 0 || s.PromptCachedTotal > 0 {
+		if s.PrefixCacheQueries > 0 || s.PromptCachedTotal > 0 || s.CacheHitRate > 0 {
+			qVal := s.PrefixCacheQueries
+			// SGLang has no query counter; show the cumulative input tokens
+			// used to compute the stable hit rate instead of a fake count.
+			if s.CacheHitRate > 0 {
+				qVal = s.PrefillEffectiveTotal
+			}
 			spRows = append(spRows,
 				tagRej+" "+styleValRed.Render(rejStr)+"  "+
 					tagHit+" "+colorPctInline(chr)+"  "+
-					tagQ+" "+styleValTeal.Render(fmtNum(s.PrefixCacheQueries)))
+					tagQ+" "+styleValTeal.Render(fmtNum(qVal)))
 		} else {
 			spRows = append(spRows,
 				tagRej+" "+styleValRed.Render(rejStr))

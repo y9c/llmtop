@@ -99,8 +99,16 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		// token_usage is a 0-1 fraction; app.go pushes KVCacheUsagePct*100 into the KV chart
 		{"token_usage", gaugeRe(`token_usage`),
 			func(s *metrics.Snapshot, v float64) { s.KVCacheUsagePct = v }},
+		// cache_hit_rate is a windowed 0-1 ratio (drops to 0 when idle). Kept as
+		// a fallback for servers that only export it; the cumulative counter path
+		// below supplies the preferred, stable CacheHitRate.
 		{"cache_hit_rate", gaugeRe(`cache_hit_rate`),
 			func(s *metrics.Snapshot, v float64) { s.PrefixCacheHits = v }},
+		// Cumulative input tokens (mode=input) — basis for the stable hit rate.
+		{"prefill_effective_tokens_total", seriesRe(`prefill_effective_tokens_total\{[^}]*mode="input"[^}]*\}`),
+			func(s *metrics.Snapshot, v float64) {
+				s.PrefillEffectiveTotal = sumSeries(`prefill_effective_tokens_total\{[^}]*mode="input"[^}]*\}`, body)
+			}},
 		// speculative decoding: verify calls == number of draft batches (monotonic)
 		{"spec_verify_calls_total", gaugeRe(`spec_verify_calls_total`),
 			func(s *metrics.Snapshot, v float64) { s.SpecDraftsTotal = v }},
@@ -127,14 +135,6 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		// counter delta so the displayed decode rate is honest.
 		{"gen_throughput", gaugeRe(`gen_throughput`),
 			func(s *metrics.Snapshot, v float64) { s.GenTokS = v }},
-		// Prefill effective tokens, mode=input only. This incs per scheduling
-		// batch (smooth), not at request completion, so its delta is an honest
-		// prefill rate. Sum across tp ranks (only rank 0 is non-zero) for the
-		// total prefill tokens in this window.
-		{"prefill_effective_tokens_total", seriesRe(`prefill_effective_tokens_total\{[^}]*mode="input"[^}]*\}`),
-			func(s *metrics.Snapshot, v float64) {
-				s.PrefillEffectiveTotal = sumSeries(`prefill_effective_tokens_total\{[^}]*mode="input"[^}]*\}`, body)
-			}},
 	}
 
 	for _, rule := range rules {
@@ -149,9 +149,20 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 		}
 	}
 
-	// cache_hit_rate is a windowed ratio, not hits/queries counters; fake the
-	// denominator so the UI's Hits/Queries*100 formula shows it directly.
-	if s.PrefixCacheHits > 0 {
+	// Stable prefix-cache hit rate from cumulative counters. device/host/storage
+	// hit tokens are the re-used tokens; PrefillEffectiveTotal(mode=input) is
+	// the processed (non-hit) input. hit% = hit / (hit + input). Unlike the
+	// windowed cache_hit_rate this never drops to 0 just because the scheduler
+	// window is idle.
+	hitIn := sumSeries(`prefill_effective_tokens_total\{[^}]*mode="device_hit"[^}]*\}`, body)
+	hitHost := sumSeries(`prefill_effective_tokens_total\{[^}]*mode="host_hit"[^}]*\}`, body)
+	hitStore := sumSeries(`prefill_effective_tokens_total\{[^}]*mode="storage_hit"[^}]*\}`, body)
+	hitTotal := hitIn + hitHost + hitStore
+	if total := hitTotal + s.PrefillEffectiveTotal; total > 0 {
+		s.CacheHitRate = hitTotal / total * 100
+	} else if s.PrefixCacheHits > 0 {
+		// Old server exports only the windowed cache_hit_rate: fake a single
+		// query so the UI's hits/queries formula shows it as a percentage.
 		s.PrefixCacheQueries = 1
 	}
 

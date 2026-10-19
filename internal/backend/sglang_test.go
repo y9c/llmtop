@@ -22,6 +22,8 @@ sglang:inter_token_latency_seconds_count{model_name="m"} 100
 sglang:gen_throughput{tp_rank="0"} 892.5
 sglang:prefill_effective_tokens_total{engine_type="unified",mode="input",tp_rank="0"} 40000
 sglang:prefill_effective_tokens_total{engine_type="unified",mode="device_hit",tp_rank="0"} 120000
+sglang:prefill_effective_tokens_total{engine_type="unified",mode="host_hit",tp_rank="0"} 8000
+sglang:prefill_effective_tokens_total{engine_type="unified",mode="storage_hit",tp_rank="0"} 0
 sglang:prefill_effective_tokens_total{engine_type="unified",mode="input",tp_rank="1"} 0
 `
 
@@ -142,5 +144,10 @@ func TestSGLangParse(t *testing.T) {
 	}
 	if s.PrefillEffectiveTotal != 40000 {
 		t.Fatalf("PrefillEffectiveTotal: want 40000 (input mode only, device_hit excluded), got %v", s.PrefillEffectiveTotal)
+	}
+	// hitTotal = device(120000) + host(8000) + storage(0) = 128000; total = 40000 + 128000 = 168000
+	// hit% = 128000/168000*100 = 76.190...
+	if got := s.CacheHitRate; got < 76.18 || got > 76.20 {
+		t.Fatalf("CacheHitRate: want ~76.19, got %v", got)
 	}
 }
