@@ -34,10 +34,10 @@ func KnownDetect(body string) (Backend, bool) {
 }
 
 var backendByName = map[string]Backend{
-	"vllm":    &VLLM{},
+	"vllm":     &VLLM{},
 	"llamacpp": &LLamaCPP{},
-	"ollama":  &Ollama{},
-	"sglang":  &SGLang{},
+	"ollama":   &Ollama{},
+	"sglang":   &SGLang{},
 }
 
 // ByName returns a backend by name. Returns nil if not found.
