@@ -676,7 +676,17 @@ func formatDuration(d time.Duration) string {
 	h := int(d.Hours())
 	m := int(d.Minutes()) % 60
 	b := durBuf[:0]
-	if h > 0 {
+	if h >= 24 {
+		dys := h / 24
+		hs := h % 24
+		b = strconv.AppendInt(b, int64(dys), 10)
+		b = append(b, "d "[:2]...)
+		if hs < 10 {
+			b = append(b, '0')
+		}
+		b = strconv.AppendInt(b, int64(hs), 10)
+		b = append(b, 'h')
+	} else if h > 0 {
 		b = strconv.AppendInt(b, int64(h), 10)
 		b = append(b, "h "[:2]...)
 		if m < 10 {

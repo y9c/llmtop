@@ -27,4 +27,10 @@ func TestFormatDuration(t *testing.T) {
 	if got := formatDuration(3700 * 1e9); got != "1h 01m" {
 		t.Fatalf("3700s: want %q, got %q", "1h 01m", got)
 	}
+	if got := formatDuration(158*3600*1e9 + 26*60*1e9); got != "6d 14h" {
+		t.Fatalf("158h26m: want %q, got %q", "6d 14h", got)
+	}
+	if got := formatDuration(24 * 3600 * 1e9); got != "1d 00h" {
+		t.Fatalf("24h: want %q, got %q", "1d 00h", got)
+	}
 }
