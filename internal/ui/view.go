@@ -72,6 +72,7 @@ var (
 	tagPre    = styleTag.Render("pre")
 	tagGen    = styleTag.Render("gen")
 	tagPrm    = styleTag.Render("prm")
+	tagReq    = styleTag.Render("req")
 	tagUp     = styleTag.Render("up")
 	tagTTFT   = styleTag.Render("ttft")
 	tagTPOT   = styleTag.Render("tpot")
@@ -352,10 +353,20 @@ func (m Model) buildView() string {
 	//   Row 3: ttft/tpot         instant(lifecycle_avg)
 	//   Row 4: prm/gen/up        lifecycle totals
 
-	// Row 1: run/wait
+	// Row 1: run/wait/req — request stats, built as segments so req (the
+	// cumulative requests processed) is only shown when the backend exported
+	// num_requests_total. run/wait are instantaneous concurrency, req is the
+	// lifetime total, so all request-level metrics sit together.
 	rr := colorValInline(s.RunningReqs, 3, 0)
 	wr := colorValInline(s.WaitingReqs, 3, 0)
-	tpRows = append(tpRows, tagRun+" "+rr+"  "+tagWait+" "+wr)
+	reqRow := []string{
+		tagRun + " " + rr,
+		tagWait + " " + wr,
+	}
+	if s.NumRequestsTotal > 0 {
+		reqRow = append(reqRow, tagReq+" "+styleValTeal.Render(fmtNum(s.NumRequestsTotal)))
+	}
+	tpRows = append(tpRows, strings.Join(reqRow, "  "))
 
 	// Row 2: pre/dec — instant(cumulative_avg). Instant rate is the live value;
 	// the parenthesised number is the avg rate over active ticks. The prm/gen

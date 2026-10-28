@@ -96,6 +96,11 @@ func (SGLang) Parse(body string) (metrics.Snapshot, error) {
 			func(s *metrics.Snapshot, v float64) { s.RunningReqs = v }},
 		{"num_", gaugeRe(`num_(?:queue_reqs|waiting_requests)`),
 			func(s *metrics.Snapshot, v float64) { s.WaitingReqs = v }},
+		// Cumulative requests processed, split across is_streaming series; sum all.
+		{"num_requests_total", gaugeRe(`num_requests_total`),
+			func(s *metrics.Snapshot, v float64) {
+				s.NumRequestsTotal = sumGauge(`num_requests_total`, body)
+			}},
 		// token_usage is a 0-1 fraction; app.go pushes KVCacheUsagePct*100 into the KV chart
 		{"token_usage", gaugeRe(`token_usage`),
 			func(s *metrics.Snapshot, v float64) { s.KVCacheUsagePct = v }},

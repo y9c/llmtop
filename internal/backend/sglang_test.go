@@ -60,6 +60,22 @@ func TestSGLangDetectRejectsVLLM(t *testing.T) {
 	}
 }
 
+func TestSGLangParseNumRequestsTotalSum(t *testing.T) {
+	var b SGLang
+	body := `sglang:num_requests_total{engine_type="unified",is_streaming="false",model_name="m"} 58
+sglang:num_requests_total{engine_type="unified",is_streaming="true",model_name="m"} 802
+sglang:num_running_reqs{engine_type="unified",model_name="m"} 1
+`
+	s, err := b.Parse(body)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	// The streaming + non-streaming series must be summed, not last-match-wins.
+	if s.NumRequestsTotal != 860 {
+		t.Fatalf("NumRequestsTotal: want 860 (58+802 summed), got %v", s.NumRequestsTotal)
+	}
+}
+
 func TestSGLangParseUnprefixedOldNames(t *testing.T) {
 	var b SGLang
 	body := `num_running_requests 3

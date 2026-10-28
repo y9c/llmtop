@@ -19,8 +19,9 @@ type Snapshot struct {
 	GPUs []GPU
 
 	// Requests
-	RunningReqs float64
-	WaitingReqs float64
+	RunningReqs      float64
+	WaitingReqs      float64
+	NumRequestsTotal float64 // cumulative requests processed (sglang num_requests_total)
 
 	// Tokens
 	GenTokensTotal    float64
